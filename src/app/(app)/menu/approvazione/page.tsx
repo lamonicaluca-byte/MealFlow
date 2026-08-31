@@ -54,7 +54,7 @@ export default function MenuApprovalPage() {
         <Card>
           <CardContent className="flex items-center gap-3 pt-5 text-sm text-muted-foreground">
             <ShieldAlert className="h-5 w-5 shrink-0 text-warning" />
-            Puoi consultare e proporre modifiche, ma solo Luca o sua moglie possono approvare il menu.
+            Puoi consultare e proporre modifiche, ma solo Luca o Anita possono approvare il menu.
           </CardContent>
         </Card>
       )}

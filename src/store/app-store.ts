@@ -10,7 +10,6 @@ import type {
   HouseholdRole,
   HouseholdSettings,
   Invitation,
-  LeftoverItem,
   Meal,
   MealAttendance,
   MealChangeReason,
@@ -29,7 +28,7 @@ import type {
 import { generateId } from "@/lib/utils";
 import { buildDemoState } from "@/lib/data/build-demo-state";
 import { getMenuGenerationService } from "@/lib/services/menu-generation";
-import type { HouseholdContext, LeftoverSuggestion, MealAlternative } from "@/lib/services/menu-generation/types";
+import type { HouseholdContext, MealAlternative } from "@/lib/services/menu-generation/types";
 import { applyMealUpdate } from "@/lib/menu/versioning";
 import { reconcileShoppingListWithMeals } from "@/lib/shopping/reconcile-shopping-list";
 import { getRoleForUser } from "@/lib/data/demo-household";
@@ -94,11 +93,6 @@ interface Actions {
   updatePantryAvailability: (itemId: string, availability: PantryAvailability, actorId: string) => void;
   removePantryItem: (itemId: string) => void;
 
-  addLeftover: (draft: Pick<LeftoverItem, "dishOrIngredient" | "quantity" | "expiresOn" | "note">, actorId: string) => void;
-  markLeftoverUsed: (leftoverId: string) => void;
-  removeLeftover: (leftoverId: string) => void;
-  getLeftoverSuggestions: () => Promise<LeftoverSuggestion[]>;
-
   addHouseholdNote: (text: string, scope: HouseholdNote["scope"], refId: string | null, actorId: string, actorName: string) => void;
   markNotificationRead: (notificationId: string) => void;
   markAllNotificationsRead: (userId: string) => void;
@@ -155,7 +149,6 @@ const initialState: AppState = {
   shoppingListItems: [],
   shoppingItemHistory: [],
   pantryItems: [],
-  leftoverItems: [],
   notes: [],
   notifications: [],
   notificationPreferences: [],
@@ -689,47 +682,6 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     const state = get();
     set({ pantryItems: state.pantryItems.filter((p) => p.id !== itemId) });
     saveToStorage(get());
-  },
-
-  addLeftover(draft, actorId) {
-    const state = get();
-    const now = new Date().toISOString();
-    const item: LeftoverItem = {
-      id: generateId("lo"),
-      householdId: state.household!.id,
-      dishOrIngredient: draft.dishOrIngredient,
-      quantity: draft.quantity,
-      loggedOn: now.slice(0, 10),
-      expiresOn: draft.expiresOn,
-      note: draft.note,
-      status: "disponibile",
-      createdAt: now,
-      createdBy: actorId,
-    };
-    set({ leftoverItems: [item, ...state.leftoverItems] });
-    saveToStorage(get());
-  },
-
-  markLeftoverUsed(leftoverId) {
-    const state = get();
-    set({ leftoverItems: state.leftoverItems.map((l) => (l.id === leftoverId ? { ...l, status: "utilizzato" } : l)) });
-    saveToStorage(get());
-  },
-
-  removeLeftover(leftoverId) {
-    const state = get();
-    set({ leftoverItems: state.leftoverItems.filter((l) => l.id !== leftoverId) });
-    saveToStorage(get());
-  },
-
-  async getLeftoverSuggestions() {
-    const state = get();
-    const service = getMenuGenerationService();
-    const result = await service.suggestLeftoverReuse({
-      context: buildContext(state),
-      leftovers: state.leftoverItems,
-    });
-    return result.ok ? result.data : [];
   },
 
   addHouseholdNote(text, scope, refId, actorId, actorName) {

@@ -3,7 +3,6 @@ import type {
   Household,
   HouseholdMember,
   HouseholdPreferences,
-  LeftoverItem,
   MealChangeReason,
   MealSlot,
   PantryItem,
@@ -84,17 +83,6 @@ export interface GeneratedShoppingItemDraft {
   needsReviewReason: string | null;
 }
 
-export interface SuggestLeftoverReuseInput {
-  context: HouseholdContext;
-  leftovers: LeftoverItem[];
-}
-
-export interface LeftoverSuggestion {
-  leftoverId: string;
-  suggestion: string;
-  disclaimer: string;
-}
-
 export interface ExplainMenuChoiceInput {
   context: HouseholdContext;
   meal: GeneratedMeal;
@@ -117,6 +105,5 @@ export interface MenuGenerationService {
   regenerateDay(input: RegenerateDayInput): Promise<ServiceResult<GeneratedMeal[]>>;
   generateMealAlternatives(input: GenerateMealAlternativesInput): Promise<ServiceResult<MealAlternative[]>>;
   generateShoppingList(input: GenerateShoppingListInput): Promise<ServiceResult<GeneratedShoppingItemDraft[]>>;
-  suggestLeftoverReuse(input: SuggestLeftoverReuseInput): Promise<ServiceResult<LeftoverSuggestion[]>>;
   explainMenuChoice(input: ExplainMenuChoiceInput): Promise<ServiceResult<string>>;
 }

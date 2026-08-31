@@ -9,7 +9,6 @@ import type {
   HouseholdPreferences,
   HouseholdUserRole,
   Invitation,
-  LeftoverItem,
   Meal,
   MealFeedback,
   MenuVersion,
@@ -50,7 +49,6 @@ export interface AppState {
   shoppingItemHistory: ShoppingItemStatusHistoryEntry[];
 
   pantryItems: PantryItem[];
-  leftoverItems: LeftoverItem[];
 
   notes: HouseholdNote[];
   notifications: AppNotification[];

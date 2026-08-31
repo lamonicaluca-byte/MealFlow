@@ -11,13 +11,11 @@ import type {
   GenerateWeeklyMenuInput,
   GeneratedShoppingItemDraft,
   HouseholdContext,
-  LeftoverSuggestion,
   MealAlternative,
   MenuGenerationService,
   RegenerateDayInput,
   RegenerateMealInput,
   ServiceResult,
-  SuggestLeftoverReuseInput,
 } from "./types";
 
 const MEDIAN_CHILD_MEMBER_AGE_GROUP = "bambino_6_10";
@@ -119,11 +117,9 @@ function buildChalikaNote(day: Weekday, context: HouseholdContext): string | nul
 }
 
 function buildChildAdaptationNote(recipe: Recipe, context: HouseholdContext): string | null {
-  const child = context.dietaryProfiles.find((p) => {
-    const member = context.members.find((m) => m.id === p.memberId);
-    return member?.ageGroup === MEDIAN_CHILD_MEMBER_AGE_GROUP;
-  });
-  if (!child) return null;
+  const childMember = context.members.find((m) => m.ageGroup === MEDIAN_CHILD_MEMBER_AGE_GROUP);
+  const child = childMember && context.dietaryProfiles.find((p) => p.memberId === childMember.id);
+  if (!child || !childMember) return null;
 
   const problematicIngredient = recipe.ingredients.find((ing) =>
     child.dislikedTextures.some((texture) => ing.name.toLowerCase().includes(texture.split(" ")[0]!.toLowerCase())) ||
@@ -131,7 +127,7 @@ function buildChildAdaptationNote(recipe: Recipe, context: HouseholdContext): st
   );
   if (!problematicIngredient) return null;
 
-  return `Per la bambina: servire una porzione separata riducendo o omettendo "${problematicIngredient.name}", oppure tritarlo finemente.`;
+  return `Per ${childMember.displayName}: servire una porzione separata riducendo o omettendo "${problematicIngredient.name}", oppure tritarlo finemente.`;
 }
 
 function computeUsesExistingPantryItems(recipe: Recipe, context: HouseholdContext): string[] {
@@ -174,6 +170,46 @@ function dateForDay(weekStartDate: string, day: Weekday): string {
   return start.toISOString().slice(0, 10);
 }
 
+const MIN_FISH_DINNERS_PER_WEEK = 2;
+
+function isFishRecipe(recipe: Pick<Recipe, "mediterraneanTags">): boolean {
+  return recipe.mediterraneanTags.includes("pesce");
+}
+
+/**
+ * Garantisce almeno {@link MIN_FISH_DINNERS_PER_WEEK} cene a base di pesce
+ * nella settimana, sostituendo (quando possibile) alcune cene non di pesce
+ * già assegnate. Muta l'array `meals` in place. Non forza mai la sostituzione
+ * se nessuna ricetta di pesce risulta idonea (es. allergia al pesce in
+ * famiglia): la sicurezza alimentare resta sempre prioritaria su questa
+ * preferenza nutrizionale.
+ */
+function ensureMinimumFishDinners(meals: GeneratedMeal[], context: HouseholdContext, rng: () => number): void {
+  const dinnerIndices = meals.map((_, i) => i).filter((i) => meals[i]!.slot === "cena");
+  let missing =
+    MIN_FISH_DINNERS_PER_WEEK - dinnerIndices.filter((i) => isFishRecipe(meals[i]!.recipe)).length;
+  if (missing <= 0) return;
+
+  const fishPool = MAIN_RECIPES.filter(isFishRecipe);
+
+  for (const idx of dinnerIndices) {
+    if (missing <= 0) break;
+    const target = meals[idx]!;
+    if (isFishRecipe(target.recipe)) continue;
+
+    const usedNames = new Set(meals.map((m) => m.recipe.name.toLowerCase()));
+    let candidates = getEligibleRecipes(fishPool, context, { day: target.day, excludeNames: usedNames, relaxSoftConstraints: false });
+    if (candidates.length === 0) {
+      candidates = getEligibleRecipes(fishPool, context, { day: target.day, excludeNames: new Set(), relaxSoftConstraints: true });
+    }
+    if (candidates.length === 0) continue; // nessuna ricetta di pesce sicura per la famiglia: non si forza il vincolo.
+
+    const chosen = pickDeterministic(candidates, rng);
+    meals[idx] = buildGeneratedMeal(chosen, target.day, target.date, "cena", context);
+    missing -= 1;
+  }
+}
+
 /**
  * Provider mock, deterministico e completamente offline: pesca dalla
  * libreria di ricette demo rispettando allergie (hard), ingredienti
@@ -198,6 +234,8 @@ export class MockMenuProvider implements MenuGenerationService {
           meals.push(buildGeneratedMeal(recipe, day, dateForDay(weekStartDate, day), slot, context));
         }
       }
+
+      ensureMinimumFishDinners(meals, context, rng);
 
       const week: GeneratedWeek = { weekStartDate, meals };
       const validation = validateGeneratedWeek(week, context.dietaryProfiles, memberNameMap(context));
@@ -342,23 +380,6 @@ export class MockMenuProvider implements MenuGenerationService {
       return { ok: true, data: drafts };
     } catch (error) {
       return { ok: false, error: { code: "shopping_list_failed", message: toErrorMessage(error) } };
-    }
-  }
-
-  async suggestLeftoverReuse(input: SuggestLeftoverReuseInput): Promise<ServiceResult<LeftoverSuggestion[]>> {
-    try {
-      const suggestions: LeftoverSuggestion[] = input.leftovers
-        .filter((l) => l.status === "disponibile")
-        .map((l) => ({
-          leftoverId: l.id,
-          suggestion: `Potresti riutilizzare "${l.dishOrIngredient}" in un pasto dei prossimi due giorni (es. come contorno, farcitura o base per un piatto veloce).`,
-          disclaimer: l.expiresOn
-            ? `Conservare in frigorifero ed è indicato come da consumarsi entro il ${l.expiresOn}.`
-            : "Non è stata indicata una scadenza: valuta l'aspetto e l'odore prima di riutilizzarlo; MealFlow non garantisce la sicurezza alimentare degli avanzi.",
-        }));
-      return { ok: true, data: suggestions };
-    } catch (error) {
-      return { ok: false, error: { code: "leftover_suggestion_failed", message: toErrorMessage(error) } };
     }
   }
 

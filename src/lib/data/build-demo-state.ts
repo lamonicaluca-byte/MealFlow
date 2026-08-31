@@ -1,10 +1,9 @@
-import { addDays, addWeeks, format, startOfWeek, subDays } from "date-fns";
+import { addWeeks, format, startOfWeek, subDays } from "date-fns";
 
 import type {
   AppNotification,
   AuditLogEntry,
   HouseholdNote,
-  LeftoverItem,
   Meal,
   MealFeedback,
   MenuVersion,
@@ -212,7 +211,7 @@ export async function buildDemoState(): Promise<AppState> {
     versionNumber: 1,
     previousVersionId: null,
     approvedBy: DEMO_USER_IDS.moglie,
-    approvedByName: "Moglie di Luca",
+    approvedByName: "Anita",
     approvedAt,
     changeReason: null,
     createdAt: approvedAt,
@@ -268,33 +267,6 @@ export async function buildDemoState(): Promise<AppState> {
     updatedAt: now,
     createdBy: "system",
   };
-
-  const leftovers: LeftoverItem[] = [
-    {
-      id: generateId("lo"),
-      householdId: DEMO_HOUSEHOLD.id,
-      dishOrIngredient: "Parmigiana di melanzane",
-      quantity: "circa 2 porzioni",
-      loggedOn: format(subDays(today, 1), DATE_FMT),
-      expiresOn: format(addDays(today, 1), DATE_FMT),
-      note: "In frigorifero, contenitore blu.",
-      status: "disponibile",
-      createdAt: now,
-      createdBy: DEMO_USER_IDS.moglie,
-    },
-    {
-      id: generateId("lo"),
-      householdId: DEMO_HOUSEHOLD.id,
-      dishOrIngredient: "Riso in bianco",
-      quantity: "una ciotola",
-      loggedOn: format(subDays(today, 2), DATE_FMT),
-      expiresOn: null,
-      note: null,
-      status: "disponibile",
-      createdAt: now,
-      createdBy: DEMO_USER_IDS.chalika,
-    },
-  ];
 
   const notes: HouseholdNote[] = [
     {
@@ -359,7 +331,7 @@ export async function buildDemoState(): Promise<AppState> {
       id: generateId("audit"),
       householdId: DEMO_HOUSEHOLD.id,
       actorId: DEMO_USER_IDS.moglie,
-      actorName: "Moglie di Luca",
+      actorName: "Anita",
       action: "menu.approved",
       entityType: "weekly_menu",
       entityId: currentMenuId,
@@ -412,7 +384,6 @@ export async function buildDemoState(): Promise<AppState> {
     shoppingListItems: currentShoppingItems,
     shoppingItemHistory: [],
     pantryItems: DEMO_PANTRY_ITEMS,
-    leftoverItems: leftovers,
     notes,
     notifications,
     notificationPreferences,

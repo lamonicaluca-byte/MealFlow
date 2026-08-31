@@ -30,10 +30,9 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur safe-top md:px-8">
-      <div className="md:hidden">
-        <span className="font-display text-xl font-semibold">MealFlow</span>
+      <div>
+        <span className="font-display text-xl font-semibold md:hidden">MealFlow</span>
       </div>
-      <div className="hidden text-eyebrow md:block">Famiglia Lamonica</div>
 
       <div className="flex items-center gap-1.5">
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Cambia tema">

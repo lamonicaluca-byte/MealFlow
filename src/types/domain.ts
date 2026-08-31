@@ -48,7 +48,7 @@ export interface HouseholdSettings {
 export interface HouseholdMember {
   id: UUID;
   householdId: UUID;
-  userId: UUID | null; // null se il membro non ha un account (es. bambina)
+  userId: UUID | null; // null se il membro non ha un account (es. un figlio minorenne)
   displayName: string;
   ageGroup: AgeGroup;
   age: number | null;
@@ -464,19 +464,6 @@ export interface PantryItem {
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
   updatedBy: UUID;
-}
-
-export interface LeftoverItem {
-  id: UUID;
-  householdId: UUID;
-  dishOrIngredient: string;
-  quantity: string | null;
-  loggedOn: ISODateString;
-  expiresOn: ISODateString | null;
-  note: string | null;
-  status: "disponibile" | "utilizzato" | "scaduto";
-  createdAt: ISODateTimeString;
-  createdBy: UUID;
 }
 
 // ---------------------------------------------------------------------------

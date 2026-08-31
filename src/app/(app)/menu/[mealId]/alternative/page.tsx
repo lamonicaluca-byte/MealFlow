@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Users } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -21,7 +21,7 @@ const REASON_OPTIONS: Array<{ value: MealChangeReason; label: string }> = [
   { value: "mangiato_recentemente", label: "Mangiato di recente" },
   { value: "troppo_lungo", label: "Troppo lungo da preparare" },
   { value: "ingrediente_non_disponibile", label: "Ingrediente non disponibile" },
-  { value: "non_gradito_bambina", label: "Non gradito dalla bambina" },
+  { value: "non_gradito_bambina", label: "Non gradito da Amelia" },
   { value: "preferiamo_altro", label: "Preferiamo altro" },
   { value: "altro", label: "Altro" },
 ];
@@ -116,9 +116,6 @@ export default function MealAlternativesPage() {
                 <div className="flex gap-3 text-xs">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" /> {alt.recipe.prepMinutes + alt.recipe.cookMinutes} min
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {alt.recipe.servings} porzioni
                   </span>
                 </div>
               </CardContent>

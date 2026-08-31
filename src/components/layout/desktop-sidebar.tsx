@@ -32,10 +32,6 @@ export function DesktopSidebar() {
           );
         })}
       </nav>
-      <div className="px-6 py-6 text-xs text-muted-foreground">
-        <p className="divider-crimson mb-3" />
-        "Meno decisioni, più tempo insieme."
-      </div>
     </aside>
   );
 }

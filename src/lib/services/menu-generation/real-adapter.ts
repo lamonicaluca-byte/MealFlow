@@ -8,13 +8,11 @@ import type {
   GenerateWeeklyMenuInput,
   GeneratedShoppingItemDraft,
   HouseholdContext,
-  LeftoverSuggestion,
   MealAlternative,
   MenuGenerationService,
   RegenerateDayInput,
   RegenerateMealInput,
   ServiceResult,
-  SuggestLeftoverReuseInput,
 } from "./types";
 import type { GeneratedMeal, GeneratedWeek } from "@/lib/validation/menu-schema";
 
@@ -94,11 +92,6 @@ export class RealMenuGenerationAdapter implements MenuGenerationService {
   async generateShoppingList(input: GenerateShoppingListInput): Promise<ServiceResult<GeneratedShoppingItemDraft[]>> {
     if (!this.isConfigured) return this.fallback.generateShoppingList(input);
     return this.fallback.generateShoppingList(input);
-  }
-
-  async suggestLeftoverReuse(input: SuggestLeftoverReuseInput): Promise<ServiceResult<LeftoverSuggestion[]>> {
-    if (!this.isConfigured) return this.fallback.suggestLeftoverReuse(input);
-    return this.fallback.suggestLeftoverReuse(input);
   }
 
   async explainMenuChoice(input: ExplainMenuChoiceInput): Promise<ServiceResult<string>> {

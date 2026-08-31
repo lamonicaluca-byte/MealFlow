@@ -63,7 +63,7 @@ export default function InvitationsPage() {
 
       {!canManage && (
         <p className="flex items-center gap-2 rounded-md bg-warning/10 p-3 text-xs text-warning">
-          <ShieldAlert className="h-4 w-4" /> Solo Luca o sua moglie possono invitare nuovi membri o modificare i ruoli.
+          <ShieldAlert className="h-4 w-4" /> Solo Luca o Anita possono invitare nuovi membri o modificare i ruoli.
         </p>
       )}
 

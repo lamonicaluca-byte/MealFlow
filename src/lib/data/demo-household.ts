@@ -13,7 +13,7 @@ const NOW = "2026-08-27T09:00:00.000Z";
 
 export const DEMO_HOUSEHOLD: Household = {
   id: DEMO_HOUSEHOLD_ID,
-  name: "Famiglia Lamonica (demo)",
+  name: "Famiglia (demo)",
   createdAt: NOW,
   updatedAt: NOW,
   createdBy: DEMO_USER_IDS.luca,
@@ -34,8 +34,8 @@ export const DEMO_USERS: AppUser[] = [
   { id: DEMO_USER_IDS.luca, email: "luca.demo@mealflow.app", displayName: "Luca", createdAt: NOW },
   {
     id: DEMO_USER_IDS.moglie,
-    email: "moglie.demo@mealflow.app",
-    displayName: "Moglie di Luca",
+    email: "anita.demo@mealflow.app",
+    displayName: "Anita",
     createdAt: NOW,
   },
   {
@@ -64,7 +64,7 @@ export const DEMO_MEMBERS: HouseholdMember[] = [
     id: DEMO_MEMBER_IDS.moglie,
     householdId: DEMO_HOUSEHOLD_ID,
     userId: DEMO_USER_IDS.moglie,
-    displayName: "Moglie di Luca",
+    displayName: "Anita",
     ageGroup: "adulto",
     age: 44,
     isDemo: true,
@@ -77,7 +77,7 @@ export const DEMO_MEMBERS: HouseholdMember[] = [
     id: DEMO_MEMBER_IDS.figlia,
     householdId: DEMO_HOUSEHOLD_ID,
     userId: null, // nessun account necessario
-    displayName: "La bambina",
+    displayName: "Amelia",
     ageGroup: "bambino_6_10",
     age: 9,
     isDemo: true,

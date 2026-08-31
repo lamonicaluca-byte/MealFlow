@@ -29,11 +29,11 @@ dimostrativi (nessuna password richiesta in modalità demo):
 | Account            | Ruolo         | Ruolo operativo | Note |
 |--------------------|---------------|------------------|------|
 | Luca               | Owner         | Approver         | Accesso completo |
-| Moglie di Luca     | Admin         | Approver         | Può approvare/modificare il menu |
+| Anita              | Admin         | Approver         | Può approvare/modificare il menu |
 | Chalika            | Collaborator  | Viewer sul menu  | Consulta menu/ricette, aggiorna spesa e dispensa, non approva né vede dati sanitari |
 
-La bambina (9 anni) non ha un account: è un profilo alimentare considerato
-nella generazione dei pasti, gestito da Luca e sua moglie.
+Amelia (9 anni) non ha un account: è un profilo alimentare considerato nella
+generazione dei pasti, gestito da Luca e Anita.
 
 ## Comandi disponibili
 
@@ -210,6 +210,26 @@ documentata qui invece che chiesta a voce:
     sono scoped per famiglia: rappresentano la libreria comune usata dal
     generatore. Ciò che è specifico di una famiglia è la fotografia
     (`recipe_snapshot`) salvata su ogni pasto assegnato.
+11. **Gestione avanzi rimossa.** Su richiesta esplicita, la sezione dedicata
+    "Avanzi" (registrazione, suggerimenti di riutilizzo) è stata rimossa per
+    mantenere l'app più snella: non esiste più la schermata `/avanzi`, la
+    voce di navigazione, lo stato `leftoverItems` né il metodo
+    `suggestLeftoverReuse` del `MenuGenerationService`. Il campo
+    `usesLeftovers` resta solo come dato interno della ricetta (usato dal
+    generatore per varietà), senza alcuna funzionalità dedicata in UI.
+12. **Almeno due cene di pesce a settimana.** `MockMenuProvider` applica un
+    aggiustamento post-generazione (`ensureMinimumFishDinners`) che sostituisce
+    cene non di pesce con ricette di pesce quando ce ne sono meno di due nella
+    settimana — rispettando comunque sempre le allergie: se nessuna ricetta di
+    pesce è sicura per la famiglia, il vincolo non viene forzato.
+13. **Contrasto colori nel tema chiaro.** `--muted-foreground` (usato per
+    metadati, icone ed etichette secondarie) è stato scurito rispetto alla
+    prima versione per garantire un contrasto ampiamente sopra la soglia AA
+    su sfondo bianco/carta.
+14. **Porzioni non mostrate in UI.** Il dato `servings` resta nel modello
+    (serve a costruire correttamente la lista della spesa) ma non è più
+    esposto nelle schermate di menu/ricetta/alternative, per ridurre il
+    numero di informazioni mostrate contemporaneamente.
 
 ## Accessibilità e sicurezza — punti salienti
 
@@ -235,8 +255,9 @@ documentata qui invece che chiesta a voce:
 - **Vitest + Testing Library** (`tests/unit`): aggregazione della lista della
   spesa (unità compatibili/incompatibili), guardia allergie, validazione
   della struttura settimanale, versioning del menu, riconciliazione della
-  spesa dopo una modifica, generazione deterministica del `MockMenuProvider`,
-  logica di priorità della Home, un componente (`MealFeedbackForm`).
+  spesa dopo una modifica, generazione deterministica del `MockMenuProvider`
+  (incluso il vincolo delle almeno due cene di pesce a settimana), logica di
+  priorità della Home, un componente (`MealFeedbackForm`).
 - **Playwright** (`tests/e2e`): flusso end-to-end login → home → menu →
   approvazione → lista della spesa, più una verifica che Chalika non veda mai
   l'azione di approvazione.

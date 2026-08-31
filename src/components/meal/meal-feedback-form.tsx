@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 const FEEDBACK_OPTIONS: Array<{ value: MealFeedbackTag; label: string }> = [
   { value: "piaciuto_a_tutti", label: "Piaciuto a tutti" },
   { value: "piaciuto_agli_adulti", label: "Piaciuto agli adulti" },
-  { value: "piaciuto_alla_bambina", label: "Piaciuto alla bambina" },
+  { value: "piaciuto_alla_bambina", label: "Piaciuto ad Amelia" },
   { value: "da_riproporre", label: "Da riproporre" },
   { value: "da_non_riproporre", label: "Da non riproporre" },
   { value: "quantita_eccessiva", label: "Quantità eccessiva" },

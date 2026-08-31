@@ -40,7 +40,6 @@ export default function PrivacyPage() {
       shoppingLists: state.shoppingLists,
       shoppingListItems: state.shoppingListItems,
       pantryItems: state.pantryItems,
-      leftoverItems: state.leftoverItems,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -78,9 +77,9 @@ export default function PrivacyPage() {
             <Baby className="h-4 w-4 text-crimson" /> Dati della minore
           </CardTitle>
           <CardDescription>
-            Il profilo della bambina non ha un account proprio e non è raggiungibile da terzi: solo Luca e sua moglie
-            possono modificarne allergie e indicazioni sanitarie. Chalika può consultare il menu adattato, ma non i
-            dati sanitari sottostanti.
+            Il profilo di Amelia non ha un account proprio e non è raggiungibile da terzi: solo Luca e Anita possono
+            modificarne allergie e indicazioni sanitarie. Chalika può consultare il menu adattato, ma non i dati
+            sanitari sottostanti.
           </CardDescription>
         </CardHeader>
       </Card>

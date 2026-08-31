@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { ArrowLeft, Clock, Flame, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, Clock, Flame, Sparkles } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -48,8 +48,7 @@ export default function RecipeDetailPage() {
         {recipe.canPrepareAhead && <Badge variant="outline">Anticipabile</Badge>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon={Users} label="Porzioni" value={String(recipe.servings)} />
+      <div className="grid grid-cols-3 gap-3">
         <StatTile icon={Clock} label="Preparazione" value={`${recipe.prepMinutes} min`} />
         <StatTile icon={Clock} label="Cottura" value={`${recipe.cookMinutes} min`} />
         <StatTile icon={Flame} label="Difficoltà" value={DIFFICULTY_LABEL[recipe.difficulty] ?? recipe.difficulty} />

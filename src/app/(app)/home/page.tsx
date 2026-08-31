@@ -4,17 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import {
-  Bell,
-  Boxes,
-  CalendarClock,
-  ChefHat,
-  ChevronRight,
-  Leaf,
-  ListChecks,
-  ShoppingCart,
-  Sparkles,
-} from "lucide-react";
+import { Bell, Boxes, CalendarClock, ChefHat, ChevronRight, ListChecks, ShoppingCart, Sparkles } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -66,7 +56,6 @@ export default function HomePage() {
   const meals = useAppStore((s) => s.meals);
   const shoppingListItems = useAppStore((s) => s.shoppingListItems);
   const notes = useAppStore((s) => s.notes);
-  const leftoverItems = useAppStore((s) => s.leftoverItems);
   const { user, role } = useCurrentUser();
 
   const now = React.useMemo(() => new Date(), []);
@@ -91,7 +80,6 @@ export default function HomePage() {
 
   const canSeeNotes = canViewOperationalNotes(role);
   const chalikaUpdates = notes.filter((n) => n.authorName === "Chalika").slice(0, 3);
-  const availableLeftovers = leftoverItems.filter((l) => l.status === "disponibile");
 
   return (
     <div className="space-y-6">
@@ -161,26 +149,6 @@ export default function HomePage() {
           </CardContent>
         </Card>
       </div>
-
-      {availableLeftovers.length > 0 && (
-        <Card>
-          <CardContent className="space-y-2 pt-5">
-            <p className="flex items-center gap-1.5 text-sm font-medium">
-              <Leaf className="h-4 w-4 text-crimson" /> Avanzi da utilizzare
-            </p>
-            <ul className="space-y-1 text-sm text-muted-foreground">
-              {availableLeftovers.map((l) => (
-                <li key={l.id}>
-                  {l.dishOrIngredient} {l.quantity ? `(${l.quantity})` : ""}
-                </li>
-              ))}
-            </ul>
-            <Link href="/avanzi" className="text-xs text-crimson hover:underline">
-              Gestisci avanzi
-            </Link>
-          </CardContent>
-        </Card>
-      )}
 
       {canSeeNotes && chalikaUpdates.length > 0 && (
         <Card>

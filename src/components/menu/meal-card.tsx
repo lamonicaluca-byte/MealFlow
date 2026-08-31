@@ -8,12 +8,14 @@ import {
   Clock,
   Flame,
   Home,
+  Info,
+  MessageCircle,
   MoreVertical,
+  PackageCheck,
   Pencil,
   RefreshCw,
   Sparkles,
   Trash2,
-  Users,
 } from "lucide-react";
 
 import type { Meal } from "@/types/domain";
@@ -33,6 +35,24 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { canEditMenu } from "@/lib/auth/permissions";
 
 const DIFFICULTY_LABEL: Record<string, string> = { facile: "Facile", media: "Media", impegnativa: "Impegnativa" };
+const MAX_COMPACT_ALLERGENS = 2;
+
+/** Icona indicatore con etichetta accessibile (tooltip nativo + screen reader). */
+function IndicatorIcon({
+  icon: Icon,
+  label,
+  className,
+}: {
+  icon: React.ElementType;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <span title={label} aria-label={label} className="inline-flex">
+      <Icon className={cn("h-4 w-4", className)} />
+    </span>
+  );
+}
 
 export function MealCard({ meal, compact = false }: { meal: Meal; compact?: boolean }) {
   const router = useRouter();
@@ -48,22 +68,26 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
   if (!recipe) return null;
 
   const mainIngredients = recipe.ingredients.slice(0, 4).map((i) => i.name);
+  const visibleAllergens = compact ? recipe.allergens.slice(0, MAX_COMPACT_ALLERGENS) : recipe.allergens;
+  const hiddenAllergensCount = compact ? recipe.allergens.length - visibleAllergens.length : 0;
+  const hasIndicators =
+    meal.usesExistingPantryItems.length > 0 || Boolean(meal.childAdaptationNote) || Boolean(meal.chalikaNote) || Boolean(meal.familyNote);
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-editorial transition-shadow hover:shadow-editorial-lg">
+    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-card p-4 shadow-editorial transition-shadow hover:shadow-editorial-lg">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <p className="text-eyebrow">
             {WEEKDAY_LABELS[meal.day]} · {MEAL_SLOT_LABELS[meal.slot]}
           </p>
-          <h3 className="font-display text-xl font-semibold leading-snug">
+          <h3 className={cn("font-display font-semibold leading-snug", compact ? "text-lg" : "text-xl")}>
             <span className="mr-1.5 text-2xl">{recipe.imageEmoji}</span>
             {recipe.name}
           </h3>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Azioni pasto">
+            <Button variant="ghost" size="icon" aria-label="Azioni pasto" className="shrink-0">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -106,71 +130,89 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
         </Badge>
       )}
 
-      {mainIngredients.length > 0 && (
+      {!compact && mainIngredients.length > 0 && (
         <p className="text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Ingredienti principali: </span>
           {mainIngredients.join(", ")}
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Users className="h-3.5 w-3.5" /> {recipe.servings} porzioni
-        </span>
+      {/* Riga meta: in versione compatta solo l'essenziale (tempo e difficoltà), il resto nel dettaglio. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="h-3.5 w-3.5" /> {recipe.prepMinutes + recipe.cookMinutes} min
         </span>
         <span className="flex items-center gap-1">
           <Flame className="h-3.5 w-3.5" /> {DIFFICULTY_LABEL[recipe.difficulty]}
         </span>
-        {recipe.canPrepareAhead && (
+        {!compact && recipe.canPrepareAhead && (
           <span className="flex items-center gap-1">
             <CalendarClock className="h-3.5 w-3.5" /> Anticipabile
           </span>
         )}
       </div>
 
-      {recipe.allergens.length > 0 && (
+      {visibleAllergens.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {recipe.allergens.map((a) => (
+          {visibleAllergens.map((a) => (
             <Badge key={a} variant="warning">
               {a}
             </Badge>
           ))}
+          {hiddenAllergensCount > 0 && <Badge variant="warning">+{hiddenAllergensCount}</Badge>}
         </div>
       )}
 
-      {(meal.usesExistingPantryItems.length > 0 || meal.usesLeftovers) && (
-        <div className="flex flex-wrap gap-1.5">
+      {compact ? (
+        // Versione compatta (griglia desktop): indicatori a icona invece di badge/paragrafi estesi,
+        // per non appesantire una colonna stretta. Il dettaglio testuale resta a un clic di distanza.
+        hasIndicators && (
+          <div className="flex flex-wrap items-center gap-2.5 text-muted-foreground">
+            {meal.usesExistingPantryItems.length > 0 && (
+              <IndicatorIcon icon={PackageCheck} label="Usa prodotti già in casa" className="text-success" />
+            )}
+            {meal.childAdaptationNote && (
+              <IndicatorIcon icon={Sparkles} label={meal.childAdaptationNote} className="text-crimson" />
+            )}
+            {meal.chalikaNote && (
+              <IndicatorIcon icon={MessageCircle} label={`Nota per Chalika: ${meal.chalikaNote}`} className="text-maiolica" />
+            )}
+            {meal.familyNote && <IndicatorIcon icon={Info} label={meal.familyNote} className="text-crimson" />}
+          </div>
+        )
+      ) : (
+        <>
           {meal.usesExistingPantryItems.length > 0 && (
-            <Badge variant="success">Usa prodotti già in casa</Badge>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="success">Usa prodotti già in casa</Badge>
+            </div>
           )}
-          {meal.usesLeftovers && <Badge variant="maiolica">Può riutilizzare avanzi</Badge>}
-        </div>
+
+          {meal.childAdaptationNote && (
+            <p className="rounded-md bg-secondary/60 px-3 py-2 text-xs text-secondary-foreground">
+              <Sparkles className="mr-1 inline h-3 w-3 text-crimson" /> {meal.childAdaptationNote}
+            </p>
+          )}
+
+          {meal.chalikaNote && (
+            <p className="rounded-md bg-maiolica/10 px-3 py-2 text-xs text-foreground">
+              <span className="font-medium">Nota per Chalika: </span>
+              {meal.chalikaNote}
+            </p>
+          )}
+
+          {meal.familyNote && (
+            <p className="rounded-md bg-crimson-muted px-3 py-2 text-xs text-crimson">{meal.familyNote}</p>
+          )}
+        </>
       )}
 
-      {meal.childAdaptationNote && (
-        <p className="rounded-md bg-secondary/60 px-3 py-2 text-xs text-secondary-foreground">
-          <Sparkles className="mr-1 inline h-3 w-3 text-crimson" /> {meal.childAdaptationNote}
-        </p>
-      )}
-
-      {meal.chalikaNote && (
-        <p className="rounded-md bg-maiolica/10 px-3 py-2 text-xs text-foreground">
-          <span className="font-medium">Nota per Chalika: </span>
-          {meal.chalikaNote}
-        </p>
-      )}
-
-      {meal.familyNote && (
-        <p className="rounded-md bg-crimson-muted px-3 py-2 text-xs text-crimson">{meal.familyNote}</p>
-      )}
-
-      <div className={cn("flex gap-2 pt-1", compact && "flex-col")}>
+      <div className="flex gap-2 pt-1">
         <Button asChild size="sm" variant="outline" className="flex-1">
           <Link href={`/menu/${meal.id}/ricetta`}>Apri ricetta</Link>
         </Button>
-        {canEdit && (
+        {/* "Cambia piatto" resta disponibile dal menu ⋮ in versione compatta, per non aggiungere un secondo bottone a piena larghezza in una colonna stretta. */}
+        {!compact && canEdit && (
           <Button asChild size="sm" variant="subtle" className="flex-1">
             <Link href={`/menu/${meal.id}/alternative`}>Cambia piatto</Link>
           </Button>

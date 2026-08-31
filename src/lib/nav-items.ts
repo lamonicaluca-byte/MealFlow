@@ -5,7 +5,6 @@ import {
   Calendar,
   ChefHat,
   Home,
-  Leaf,
   ListChecks,
   Settings,
   ShieldCheck,
@@ -31,7 +30,6 @@ export const PRIMARY_NAV: NavItem[] = [
 
 /** Voci secondarie: raccolte nel foglio "Altro" su mobile, elencate nella sidebar su desktop. */
 export const SECONDARY_NAV: NavItem[] = [
-  { href: "/avanzi", label: "Avanzi", icon: Leaf },
   { href: "/calendario", label: "Calendario familiare", icon: Calendar },
   { href: "/storico", label: "Storico menu", icon: ListChecks },
   { href: "/profili", label: "Profili", icon: Users },

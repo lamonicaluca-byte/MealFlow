@@ -33,7 +33,7 @@ describe("MockMenuProvider.generateWeeklyMenu", () => {
     expect(validation.isValid).toBe(true);
   });
 
-  it("non propone mai la frutta secca, per l'allergia della bambina", async () => {
+  it("non propone mai la frutta secca, per l'allergia di Amelia", async () => {
     const provider = new MockMenuProvider();
     const result = await provider.generateWeeklyMenu({ context, weekStartDate: "2026-08-31" });
     expect(result.ok).toBe(true);
@@ -78,6 +78,18 @@ describe("MockMenuProvider.generateWeeklyMenu", () => {
     for (const alt of result.data) {
       expect(containsTreeNuts(alt.recipe)).toBe(false);
     }
+  });
+
+  it("propone almeno due cene a base di pesce nella settimana", async () => {
+    const provider = new MockMenuProvider();
+    const result = await provider.generateWeeklyMenu({ context, weekStartDate: "2026-08-31" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const fishDinners = result.data.meals.filter(
+      (m) => m.slot === "cena" && m.recipe.mediterraneanTags.includes("pesce"),
+    );
+    expect(fishDinners.length).toBeGreaterThanOrEqual(2);
   });
 
   it("include sempre il membro con allergia tra i profili verificati (integrità dei dati demo)", () => {
