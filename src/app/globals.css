@@ -1,0 +1,185 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design System "ISAIA / Risto Eventi" applicato a MealFlow.
+ * Estetica editoriale, elegante, minimalista. Accento rosso cremisi.
+ * Tema scuro = predefinito. Tema chiaro = "Maiolica di Capri".
+ * Tutti i colori sono espressi come tripletta HSL (senza wrapper hsl())
+ * per essere composti da Tailwind via hsl(var(--token)).
+ */
+
+@layer base {
+  :root {
+    --font-display: "Cormorant Garamond", "Times New Roman", serif;
+    --font-sans: "Montserrat", system-ui, sans-serif;
+    --radius: 0.625rem;
+
+    /* --- Tema scuro (predefinito) -------------------------------------- */
+    --background: 20 9% 7%;
+    --foreground: 40 24% 94%;
+
+    --surface: 20 9% 9%;
+    --surface-raised: 22 9% 12%;
+    --surface-sunken: 20 10% 5%;
+
+    --card: 22 9% 11%;
+    --card-foreground: 40 24% 94%;
+    --popover: 22 9% 11%;
+    --popover-foreground: 40 24% 94%;
+
+    --primary: 350 62% 42%;
+    --primary-foreground: 40 30% 97%;
+
+    --secondary: 21 8% 17%;
+    --secondary-foreground: 40 20% 92%;
+
+    --muted: 21 8% 15%;
+    --muted-foreground: 32 8% 62%;
+
+    --accent: 205 45% 40%;
+    --accent-foreground: 40 30% 97%;
+
+    --crimson: 350 62% 42%;
+    --crimson-foreground: 40 30% 97%;
+    --crimson-muted: 350 38% 20%;
+
+    --maiolica-blue: 205 50% 46%;
+    --maiolica-blue-deep: 205 55% 26%;
+
+    --destructive: 4 62% 47%;
+    --destructive-foreground: 40 30% 97%;
+
+    --success: 145 32% 40%;
+    --success-foreground: 40 30% 97%;
+
+    --warning: 38 70% 50%;
+    --warning-foreground: 20 20% 12%;
+
+    --border: 22 9% 19%;
+    --input: 22 9% 19%;
+    --ring: 350 62% 46%;
+  }
+
+  html.light {
+    /* --- Tema chiaro "Maiolica di Capri" -------------------------------- */
+    --background: 40 32% 98%;
+    --foreground: 212 32% 13%;
+
+    --surface: 40 28% 97%;
+    --surface-raised: 0 0% 100%;
+    --surface-sunken: 40 22% 93%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 212 32% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 212 32% 13%;
+
+    --primary: 350 63% 38%;
+    --primary-foreground: 40 30% 98%;
+
+    --secondary: 205 32% 93%;
+    --secondary-foreground: 210 40% 20%;
+
+    --muted: 40 16% 91%;
+    --muted-foreground: 210 14% 38%;
+
+    --accent: 205 62% 36%;
+    --accent-foreground: 40 30% 98%;
+
+    --crimson: 350 63% 38%;
+    --crimson-foreground: 40 30% 98%;
+    --crimson-muted: 350 48% 92%;
+
+    --maiolica-blue: 205 62% 36%;
+    --maiolica-blue-deep: 205 66% 22%;
+
+    --destructive: 4 65% 42%;
+    --destructive-foreground: 40 30% 98%;
+
+    --success: 145 38% 30%;
+    --success-foreground: 40 30% 98%;
+
+    --warning: 36 78% 40%;
+    --warning-foreground: 40 30% 98%;
+
+    --border: 205 22% 86%;
+    --input: 205 22% 86%;
+    --ring: 350 63% 40%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    @apply bg-crimson/30 text-foreground;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Scrollbar discreta, coerente con l'estetica editoriale */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+}
+
+@layer components {
+  /* Numeri e titoli editoriali in Cormorant Garamond */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .text-eyebrow {
+    @apply font-sans text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground;
+  }
+
+  .divider-crimson {
+    @apply h-px w-10 bg-crimson;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pb-safe-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 4.5rem);
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}

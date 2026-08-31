@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>MealFlow — Sei offline</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        background: #171310;
+        color: #f2ece2;
+        font-family: Georgia, "Times New Roman", serif;
+        text-align: center;
+        padding: 2rem;
+      }
+      h1 {
+        font-weight: 600;
+        font-size: 2.25rem;
+        margin: 0;
+      }
+      p {
+        font-family: system-ui, sans-serif;
+        color: #b8ada0;
+        max-width: 28rem;
+        line-height: 1.5;
+      }
+      button {
+        margin-top: 1rem;
+        font-family: system-ui, sans-serif;
+        font-size: 0.875rem;
+        padding: 0.65rem 1.5rem;
+        border-radius: 0.5rem;
+        border: none;
+        background: #a3293c;
+        color: #fbf1ea;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>MealFlow</h1>
+    <p>
+      Sembra che tu sia offline. Le pagine già visitate restano disponibili; le modifiche fatte in questa modalità
+      resteranno salvate sul dispositivo e si sincronizzeranno appena torna la connessione.
+    </p>
+    <button onclick="location.reload()">Riprova</button>
+  </body>
+</html>
