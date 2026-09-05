@@ -24,10 +24,14 @@ import type {
 } from "./types";
 import type { GeneratedMeal, GeneratedWeek } from "@/lib/validation/menu-schema";
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.6-flash";
 
 function toJsonSchema(schema: z.ZodTypeAny): unknown {
-  return zodToJsonSchema(schema, { target: "openApi3" });
+  // "jsonSchema7" (non "openApi3"): quest'ultimo produce lo stile draft-04 di
+  // exclusiveMinimum/Maximum ({ minimum, exclusiveMinimum: true }), che
+  // responseJsonSchema di Gemini rifiuta ("must be a number"). Draft-07 usa
+  // invece la forma numerica diretta ({ exclusiveMinimum: 0 }), supportata.
+  return zodToJsonSchema(schema, { target: "jsonSchema7" });
 }
 
 /**

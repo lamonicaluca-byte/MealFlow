@@ -26,9 +26,15 @@ import type { GeneratedMeal, GeneratedWeek } from "@/lib/validation/menu-schema"
 
 const DEFAULT_MODEL = "claude-sonnet-5";
 
-/** Converte uno schema Zod in JSON Schema per il campo `input_schema` di un tool Claude. */
+/**
+ * Converte uno schema Zod in JSON Schema per il campo `input_schema` di un
+ * tool Claude. "jsonSchema7" (non "openApi3"): quest'ultimo produce lo
+ * stile draft-04 di exclusiveMinimum/Maximum ({ minimum, exclusiveMinimum:
+ * true }) — draft-07 usa invece la forma numerica diretta, più ampiamente
+ * supportata (vedi lo stesso problema, confermato, nell'adapter Gemini).
+ */
 function toInputSchema(schema: z.ZodTypeAny): Anthropic.Tool.InputSchema {
-  const json = zodToJsonSchema(schema, { target: "openApi3" });
+  const json = zodToJsonSchema(schema, { target: "jsonSchema7" });
   return json as Anthropic.Tool.InputSchema;
 }
 
