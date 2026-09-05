@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 
 import { isSupabaseConfigured } from "./is-configured";
+import { getSupabaseAnonKey, getSupabaseServiceRoleKey, getSupabaseUrl } from "./env";
 
 /**
  * Client Supabase per Server Components / Route Handlers / Server Actions.
@@ -14,7 +16,7 @@ export function createSupabaseServerClient() {
   if (!isSupabaseConfigured()) return null;
   const cookieStore = cookies();
 
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string, {
+  return createServerClient(getSupabaseUrl() as string, getSupabaseAnonKey() as string, {
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value;
@@ -36,4 +38,19 @@ export function createSupabaseServerClient() {
       },
     },
   });
+}
+
+/**
+ * Client con la service_role key: bypassa ogni Row Level Security. Riservato
+ * a operazioni server-to-server che non hanno un utente autenticato dietro
+ * (login "accesso rapido", generazione schedulata del menu, keep-alive) — MAI
+ * importato da un componente client, e mai usato per servire richieste
+ * direttamente guidate dall'utente senza aver prima verificato i permessi
+ * applicativi (vedi `src/lib/auth/permissions.ts`).
+ */
+export function createSupabaseServiceRoleClient() {
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceRoleKey();
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }

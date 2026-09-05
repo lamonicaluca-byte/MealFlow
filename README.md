@@ -87,6 +87,37 @@ errore). Collegare le altre entità significa scrivere un repository
 `SupabaseXxxRepository` accanto a ciascun modulo in `src/lib/data` che oggi
 legge/scrive lo store demo, mantenendo la stessa interfaccia.
 
+### Stato del collegamento a Supabase (produzione)
+
+Con le variabili d'ambiente valorizzate (vedi `.env.example`), l'app passa
+dalla modalità demo a un backend Supabase reale:
+
+- **Login "un clic" con sessione reale**: la pagina di login mostra i 3
+  account della famiglia come bottoni; ognuno chiama
+  `POST /api/auth/quick-login`, che esegue un vero
+  `signInWithPassword` lato server con credenziali note solo al backend
+  (`QUICK_LOGIN_EMAIL_*` / `QUICK_LOGIN_PASSWORD_*`).
+- **Bootstrap e generazione menu**: `POST /api/menu/ensure` genera (se manca)
+  il menu della settimana corrente con la service-role key, sempre in stato
+  `pending_approval` (mai auto-approvato).
+- **Approvazione menu**: `POST /api/menu/[menuId]/approve` è un'unica
+  mutazione atomica lato server (verifica ruolo, aggiorna la versione,
+  genera la lista della spesa aggregata) — l'app la attende con `await`
+  per evitare che una navigazione la interrompa a metà.
+- **Lista della spesa**: le azioni di stato/quantità/note sugli articoli
+  sincronizzano su Supabase in background dopo l'aggiornamento ottimistico
+  locale (`syncSupabase` in `src/store/app-store.ts`).
+
+Cosa **non** è ancora collegato (resta solo locale/`localStorage` anche in
+produzione, quindi non sincronizzato tra dispositivi diversi): presenze ai
+pasti, note pasto/famiglia, pasti manuali, sostituzione/rigenerazione pasto,
+inviti membri, preferenze di notifica, feedback pasto, profilo alimentare e
+impostazioni famiglia in onboarding. Nessun keep-alive automatico e nessun
+Supabase Realtime sono ancora presenti: il progetto Supabase free tier può
+mettersi in pausa per inattività, e un cambiamento fatto da un membro della
+famiglia non compare in tempo reale sugli altri dispositivi finché non si
+ricarica la pagina.
+
 ---
 
 ## Stack tecnologico

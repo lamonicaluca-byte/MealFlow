@@ -3,6 +3,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 import { isSupabaseConfigured } from "./is-configured";
+import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 
 /**
  * Client Supabase per il browser. Restituisce `null` in modalità demo:
@@ -12,8 +13,5 @@ import { isSupabaseConfigured } from "./is-configured";
  */
 export function createSupabaseBrowserClient() {
   if (!isSupabaseConfigured()) return null;
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
-  );
+  return createBrowserClient(getSupabaseUrl() as string, getSupabaseAnonKey() as string);
 }

@@ -6,6 +6,7 @@ import { Bell, Moon, Repeat, Sun } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useTheme } from "@/components/theme-provider";
+import { isSupabaseConfigured } from "@/lib/supabase/is-configured";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,15 +61,19 @@ export function AppHeader() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel>{user?.displayName}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px]">
-              <Repeat className="h-3 w-3" /> Cambia utente (demo)
-            </DropdownMenuLabel>
-            {users.map((u) => (
-              <DropdownMenuItem key={u.id} onSelect={() => loginAs(u.id)} disabled={u.id === user?.id}>
-                {u.displayName}
-              </DropdownMenuItem>
-            ))}
+            {!isSupabaseConfigured() && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px]">
+                  <Repeat className="h-3 w-3" /> Cambia utente (demo)
+                </DropdownMenuLabel>
+                {users.map((u) => (
+                  <DropdownMenuItem key={u.id} onSelect={() => loginAs(u.id)} disabled={u.id === user?.id}>
+                    {u.displayName}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/impostazioni">Impostazioni</Link>

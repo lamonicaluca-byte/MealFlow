@@ -20,6 +20,7 @@ export default function MenuApprovalPage() {
   const approveMenu = useAppStore((s) => s.approveMenu);
   const { user, role } = useCurrentUser();
   const { toast } = useToast();
+  const [isApproving, setIsApproving] = React.useState(false);
 
   const pendingMenu = weeklyMenus.find((m) => m.status === "pending_approval" || m.status === "generated");
   const canApprove = canApproveMenu(role);
@@ -69,9 +70,12 @@ export default function MenuApprovalPage() {
         <div className="sticky bottom-20 flex justify-end md:bottom-4">
           <Button
             size="lg"
-            onClick={() => {
+            disabled={isApproving}
+            onClick={async () => {
               if (!user) return;
-              const result = approveMenu(pendingMenu.id, user.id, user.displayName);
+              setIsApproving(true);
+              const result = await approveMenu(pendingMenu.id, user.id, user.displayName);
+              setIsApproving(false);
               toast({
                 title: result.ok ? result.message : "Approvazione non riuscita",
                 description: result.ok ? "La lista della spesa è stata generata automaticamente." : result.message,
@@ -79,7 +83,7 @@ export default function MenuApprovalPage() {
               });
             }}
           >
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Approva il menu
+            <CheckCircle2 className="mr-2 h-4 w-4" /> {isApproving ? "Approvazione in corso…" : "Approva il menu"}
           </Button>
         </div>
       )}

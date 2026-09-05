@@ -25,13 +25,16 @@ import type {
 } from "@/types/domain";
 import { generateId } from "@/lib/utils";
 import { buildDemoState } from "@/lib/data/build-demo-state";
+import { buildProductionState } from "@/lib/data/build-production-state";
 import { getMenuGenerationService } from "@/lib/services/menu-generation";
 import type { HouseholdContext, MealAlternative } from "@/lib/services/menu-generation/types";
 import { applyMealUpdate } from "@/lib/menu/versioning";
 import { reconcileShoppingListWithMeals } from "@/lib/shopping/reconcile-shopping-list";
-import { getRoleForUser } from "@/lib/data/demo-household";
 import { canApproveMenu as canApproveMenuRole } from "@/lib/auth/permissions";
 import { getRealtimeBus } from "@/lib/realtime/demo-bus";
+import { isSupabaseConfigured } from "@/lib/supabase/is-configured";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { shoppingListItemToRow } from "@/lib/data/mappers";
 import type { AppState } from "./types";
 
 const STORAGE_KEY = "mealflow-demo-state-v1";
@@ -39,7 +42,7 @@ const STORAGE_KEY = "mealflow-demo-state-v1";
 interface Actions {
   initialize: () => Promise<void>;
   loginAs: (userId: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 
   setOnboardingStep: (step: number) => void;
   completeOnboarding: () => void;
@@ -53,7 +56,7 @@ interface Actions {
 
   updateNotificationPreferences: (userId: string, patch: Partial<NotificationPreferences>) => void;
 
-  approveMenu: (menuId: string, actorId: string, actorName: string) => { ok: boolean; message: string };
+  approveMenu: (menuId: string, actorId: string, actorName: string) => Promise<{ ok: boolean; message: string }>;
   updateMealAttendance: (mealId: string, attendance: MealAttendance, actorId: string) => void;
   addMealNote: (mealId: string, text: string, target: "family" | "chalika", actorId: string) => void;
   markMealOut: (mealId: string, actorId: string) => void;
@@ -121,6 +124,29 @@ function loadFromStorage(): AppState | null {
   }
 }
 
+/**
+ * Esegue una scrittura su Supabase in modo "fire and forget", solo quando
+ * configurato: lo stato locale è già stato aggiornato in modo ottimistico
+ * (set(...) avviene sempre prima di chiamare questa funzione), quindi un
+ * eventuale errore di rete viene solo loggato, senza bloccare l'interfaccia.
+ * Le altre schede/dispositivi ricevono comunque l'aggiornamento reale via
+ * Supabase Realtime quando la scrittura va a buon fine.
+ */
+function syncSupabase(
+  run: (
+    supabase: NonNullable<ReturnType<typeof createSupabaseBrowserClient>>,
+  ) => PromiseLike<{ error: unknown } | void> | void,
+) {
+  if (!isSupabaseConfigured()) return;
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return;
+  Promise.resolve(run(supabase)).then((result) => {
+    if (result && "error" in result && result.error) {
+      console.error("Sincronizzazione Supabase non riuscita:", result.error);
+    }
+  });
+}
+
 const initialState: AppState = {
   status: "idle",
   currentUserId: null,
@@ -153,6 +179,26 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
   async initialize() {
     if (get().status === "ready") return;
     set({ status: "loading" });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createSupabaseBrowserClient();
+      const { data } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
+      if (!data.user) {
+        // Nessuna sessione: resta "ready" senza utente, così RequireAuth
+        // reindirizza al login (che qui esegue un vero accesso Supabase).
+        set({ ...initialState, status: "ready" });
+        return;
+      }
+      try {
+        const fresh = await buildProductionState(supabase!, data.user.id);
+        set({ ...fresh, status: "ready" });
+      } catch (error) {
+        console.error("Impossibile caricare i dati da Supabase:", error);
+        set({ ...initialState, status: "ready" });
+      }
+      return;
+    }
+
     const stored = loadFromStorage();
     if (stored) {
       set({ ...stored, status: "ready" });
@@ -168,7 +214,13 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     saveToStorage(get());
   },
 
-  logout() {
+  async logout() {
+    if (isSupabaseConfigured()) {
+      const supabase = createSupabaseBrowserClient();
+      await supabase?.auth.signOut();
+      set({ ...initialState, status: "ready" });
+      return;
+    }
     set({ currentUserId: null });
     saveToStorage(get());
   },
@@ -263,14 +315,38 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     saveToStorage(get());
   },
 
-  approveMenu(menuId, actorId, actorName) {
+  async approveMenu(menuId, actorId, actorName) {
     const state = get();
     const menu = state.weeklyMenus.find((m) => m.id === menuId);
     if (!menu) return { ok: false, message: "Menu non trovato." };
-    const role = getRoleForUser(actorId);
+    const role = state.roles.find((r) => r.userId === actorId);
     if (!canApproveMenuRole(role)) {
       return { ok: false, message: "Non hai i permessi per approvare il menu." };
     }
+
+    if (isSupabaseConfigured()) {
+      // A differenza delle altre mutazioni, l'approvazione comporta più
+      // passaggi in sequenza (versione, stato del menu, creazione della
+      // lista della spesa): si attende la risposta del server prima di
+      // considerarla completata, per non rischiare che una navigazione
+      // immediata interrompa una scrittura "fire and forget" a metà.
+      try {
+        const res = await fetch(`/api/menu/${menuId}/approve`, { method: "POST" });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { ok: false, message: body.error ?? "Approvazione non riuscita." };
+        }
+        const supabase = createSupabaseBrowserClient();
+        if (supabase) {
+          const fresh = await buildProductionState(supabase, actorId);
+          set({ ...fresh, status: "ready" });
+        }
+        return { ok: true, message: `APPROVATO DA ${(body.approvedByName ?? actorName).toUpperCase()}` };
+      } catch {
+        return { ok: false, message: "Errore di rete durante l'approvazione." };
+      }
+    }
+
     const now = new Date().toISOString();
     const versions = state.menuVersions.map((v) =>
       v.id === menu.currentVersionId
@@ -568,6 +644,17 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
         createdAt: now,
       });
     }
+    syncSupabase(async (supabase) => {
+      const updateResult = await supabase.from("shopping_list_items").update({ status }).eq("id", itemId);
+      if (updateResult.error) return updateResult;
+      return supabase.from("shopping_item_status_history").insert({
+        item_id: itemId,
+        previous_status: item.status,
+        new_status: status,
+        changed_by: actorId,
+        changed_by_name: actorName,
+      });
+    });
     saveToStorage(get());
   },
 
@@ -577,18 +664,21 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     set({
       shoppingListItems: state.shoppingListItems.map((i) => (i.id === itemId ? { ...i, quantity, unit, updatedAt: now } : i)),
     });
+    syncSupabase((supabase) => supabase.from("shopping_list_items").update({ quantity, unit }).eq("id", itemId));
     saveToStorage(get());
   },
 
   updateShoppingItemNote(itemId, note) {
     const state = get();
     set({ shoppingListItems: state.shoppingListItems.map((i) => (i.id === itemId ? { ...i, note } : i)) });
+    syncSupabase((supabase) => supabase.from("shopping_list_items").update({ note }).eq("id", itemId));
     saveToStorage(get());
   },
 
   updateShoppingItemCategory(itemId, category) {
     const state = get();
     set({ shoppingListItems: state.shoppingListItems.map((i) => (i.id === itemId ? { ...i, category } : i)) });
+    syncSupabase((supabase) => supabase.from("shopping_list_items").update({ category }).eq("id", itemId));
     saveToStorage(get());
   },
 
@@ -621,6 +711,9 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
       payload: { itemId: item.id },
       createdAt: now,
     });
+    syncSupabase((supabase) =>
+      supabase.from("shopping_list_items").insert({ id: item.id, ...shoppingListItemToRow(item) }),
+    );
     saveToStorage(get());
   },
 
@@ -629,6 +722,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     const item = state.shoppingListItems.find((i) => i.id === itemId);
     if (!item?.isManual) return;
     set({ shoppingListItems: state.shoppingListItems.filter((i) => i.id !== itemId) });
+    syncSupabase((supabase) => supabase.from("shopping_list_items").delete().eq("id", itemId));
     saveToStorage(get());
   },
 
