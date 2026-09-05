@@ -167,7 +167,7 @@ function dateForDay(weekStartDate: string, day: Weekday): string {
   return start.toISOString().slice(0, 10);
 }
 
-const MIN_FISH_DINNERS_PER_WEEK = 2;
+const MIN_FISH_DINNERS_PER_WEEK = 1;
 
 function isFishRecipe(recipe: Pick<Recipe, "mediterraneanTags">): boolean {
   return recipe.mediterraneanTags.includes("pesce");

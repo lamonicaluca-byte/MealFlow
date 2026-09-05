@@ -94,7 +94,7 @@ dopo con `validateGeneratedWeek`: non sono mai delegate al solo modello,
 nemmeno quando il prompt le richiede esplicitamente.
 
 Le stesse regole della famiglia (allergie, preferenze, impostazioni,
-almeno 2 cene di pesce a settimana) sono tradotte in testo nel prompt
+almeno 1 cena di pesce a settimana) sono tradotte in testo nel prompt
 (`src/lib/services/menu-generation/prompts.ts`) sia per il provider AI reale
 sia — come regole applicate in codice — per il provider mock: i due
 provider seguono le stesse regole, cambia solo il "motore" che sceglie le
@@ -297,7 +297,7 @@ documentata qui invece che chiesta a voce:
     `suggestLeftoverReuse` del `MenuGenerationService`. Il campo
     `usesLeftovers` resta solo come dato interno della ricetta (usato dal
     generatore per varietà), senza alcuna funzionalità dedicata in UI.
-12. **Almeno due cene di pesce a settimana.** `MockMenuProvider` applica un
+12. **Almeno una cena di pesce a settimana.** `MockMenuProvider` applica un
     aggiustamento post-generazione (`ensureMinimumFishDinners`) che sostituisce
     cene non di pesce con ricette di pesce quando ce ne sono meno di due nella
     settimana — rispettando comunque sempre le allergie: se nessuna ricetta di
@@ -351,7 +351,7 @@ documentata qui invece che chiesta a voce:
   spesa (unità compatibili/incompatibili), guardia allergie, validazione
   della struttura settimanale, versioning del menu, riconciliazione della
   spesa dopo una modifica, generazione deterministica del `MockMenuProvider`
-  (incluso il vincolo delle almeno due cene di pesce a settimana), logica di
+  (incluso il vincolo di almeno una cena di pesce a settimana), logica di
   priorità della Home, un componente (`MealFeedbackForm`).
 - **Playwright** (`tests/e2e`): flusso end-to-end login → home → menu →
   approvazione → lista della spesa, più una verifica che Chalika non veda mai

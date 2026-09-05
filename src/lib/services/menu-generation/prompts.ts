@@ -96,7 +96,7 @@ export function buildHouseholdRulesText(context: HouseholdContext): string {
   }
 
   lines.push("", "## Regole fisse dell'app (sempre valide)");
-  lines.push("- Almeno 2 cene a base di pesce nella settimana, a meno che non sia impossibile per un'allergia al pesce in famiglia.");
+  lines.push("- Almeno 1 cena a base di pesce nella settimana, a meno che non sia impossibile per un'allergia al pesce in famiglia.");
   lines.push("- Struttura della settimana: lunedì-venerdì colazione e cena; sabato e domenica anche il pranzo.");
   lines.push("- Varia le ricette all'interno della stessa settimana: non ripetere lo stesso piatto principale due volte.");
 

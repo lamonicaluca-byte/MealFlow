@@ -57,11 +57,7 @@ insert into dietary_profiles (id, household_id, member_id, preferred_dishes, dis
     'Preferisce porzioni più piccole e sapori delicati.', 'bassa')
 on conflict (id) do nothing;
 
--- Allergie, intolleranze, esclusioni, dislike
-insert into allergies (id, dietary_profile_id, allergen, severity, notes) values
-  ('eef2c195-011e-49b3-991f-eb76636151e4', 'db0f2b15-8b9d-4fa1-943b-2cecaf58adb7', 'frutta a guscio', 'moderata', 'diagnosi pediatrica, evitare noci, nocciole, mandorle')
-on conflict (id) do nothing;
-
+-- Intolleranze, esclusioni, dislike (nessuna allergia in famiglia).
 insert into intolerances (id, dietary_profile_id, substance, notes) values
   ('3666b9b7-9490-47bd-ad4a-19e62d539ffb', '3d9043d0-391c-4409-a18e-b22ed179ab84', 'lattosio', 'lieve, tollera piccole quantità')
 on conflict (id) do nothing;

@@ -181,14 +181,7 @@ export const DEMO_DIETARY_PROFILES: DietaryProfile[] = [
     id: "70000000-0000-4000-8000-000000000003",
     householdId: DEMO_HOUSEHOLD_ID,
     memberId: DEMO_MEMBER_IDS.figlia,
-    allergies: [
-      {
-        id: "all-1",
-        allergen: "frutta a guscio",
-        severity: "moderata",
-        notes: "diagnosi pediatrica, evitare noci, nocciole, mandorle",
-      },
-    ],
+    allergies: [],
     intolerances: [],
     restrictions: [],
     dislikes: [{ id: "dl-2", ingredientOrDish: "cime di rapa" }],
