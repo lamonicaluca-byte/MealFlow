@@ -13,14 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MealAttendanceForm } from "@/components/meal/meal-attendance-form";
 import { MealFeedbackForm } from "@/components/meal/meal-feedback-form";
 
 export default function MealDetailPage() {
   const params = useParams<{ mealId: string }>();
   const meals = useAppStore((s) => s.meals);
-  const members = useAppStore((s) => s.members);
-  const updateMealAttendance = useAppStore((s) => s.updateMealAttendance);
   const addMealNote = useAppStore((s) => s.addMealNote);
   const submitMealFeedback = useAppStore((s) => s.submitMealFeedback);
   const { user, role } = useCurrentUser();
@@ -61,19 +58,6 @@ export default function MealDetailPage() {
           </Button>
         )}
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Chi c'è a questo pasto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MealAttendanceForm
-            meal={meal}
-            members={members}
-            onSave={(attendance) => user && updateMealAttendance(meal.id, attendance, user.id)}
-          />
-        </CardContent>
-      </Card>
 
       {canSeeNotes && (
         <Card>
