@@ -17,8 +17,6 @@ import type {
   MealSlot,
   NotificationPreferences,
   OperationalRole,
-  PantryAvailability,
-  PantryItem,
   Recipe,
   ShoppingCategory,
   ShoppingItemStatus,
@@ -86,13 +84,6 @@ interface Actions {
   deleteManualShoppingItem: (itemId: string) => void;
   undoLastShoppingChange: () => void;
 
-  addPantryItem: (
-    draft: Omit<PantryItem, "id" | "householdId" | "createdAt" | "updatedAt" | "normalizedName" | "updatedBy">,
-    actorId: string,
-  ) => void;
-  updatePantryAvailability: (itemId: string, availability: PantryAvailability, actorId: string) => void;
-  removePantryItem: (itemId: string) => void;
-
   addHouseholdNote: (text: string, scope: HouseholdNote["scope"], refId: string | null, actorId: string, actorName: string) => void;
   markNotificationRead: (notificationId: string) => void;
   markAllNotificationsRead: (userId: string) => void;
@@ -106,7 +97,6 @@ function buildContext(state: AppState): HouseholdContext {
     members: state.members,
     dietaryProfiles: state.dietaryProfiles,
     preferences: state.preferences!,
-    pantryItems: state.pantryItems,
   };
 }
 
@@ -148,7 +138,6 @@ const initialState: AppState = {
   shoppingLists: [],
   shoppingListItems: [],
   shoppingItemHistory: [],
-  pantryItems: [],
   notes: [],
   notifications: [],
   notificationPreferences: [],
@@ -195,7 +184,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     const state = get();
     if (!state.household) return;
     const now = new Date().toISOString();
-    set({ household: { ...state.household, onboardingStep: 5, onboardingCompletedAt: now, updatedAt: now } });
+    set({ household: { ...state.household, onboardingStep: 4, onboardingCompletedAt: now, updatedAt: now } });
     saveToStorage(get());
   },
 
@@ -301,7 +290,6 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
         shoppingListId: listId,
         existingItems: [],
         meals: mealsForVersion,
-        pantryItems: state.pantryItems,
         now,
       });
       shoppingLists = [
@@ -653,37 +641,6 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     saveToStorage(get());
   },
 
-  addPantryItem(draft, actorId) {
-    const state = get();
-    const now = new Date().toISOString();
-    const item: PantryItem = {
-      ...draft,
-      id: generateId("pantry"),
-      householdId: state.household!.id,
-      normalizedName: draft.name.toLowerCase().trim(),
-      createdAt: now,
-      updatedAt: now,
-      updatedBy: actorId,
-    };
-    set({ pantryItems: [...state.pantryItems, item] });
-    saveToStorage(get());
-  },
-
-  updatePantryAvailability(itemId, availability, actorId) {
-    const state = get();
-    const now = new Date().toISOString();
-    set({
-      pantryItems: state.pantryItems.map((p) => (p.id === itemId ? { ...p, availability, updatedAt: now, updatedBy: actorId } : p)),
-    });
-    saveToStorage(get());
-  },
-
-  removePantryItem(itemId) {
-    const state = get();
-    set({ pantryItems: state.pantryItems.filter((p) => p.id !== itemId) });
-    saveToStorage(get());
-  },
-
   addHouseholdNote(text, scope, refId, actorId, actorName) {
     const state = get();
     const now = new Date().toISOString();
@@ -780,7 +737,6 @@ function applyToMeal(
         shoppingListId: existingList.id,
         existingItems: state.shoppingListItems.filter((i) => i.shoppingListId === existingList.id),
         meals: result.meals,
-        pantryItems: state.pantryItems,
         now,
       });
       shoppingLists = state.shoppingLists.map((l) => (l.id === existingList.id ? { ...l, menuVersionId: version.id, updatedAt: now } : l));

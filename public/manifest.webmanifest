@@ -1,7 +1,7 @@
 {
   "name": "MealFlow — Meno decisioni, più tempo insieme.",
   "short_name": "MealFlow",
-  "description": "Menu settimanale, lista della spesa e dispensa condivisi in famiglia.",
+  "description": "Menu settimanale e lista della spesa condivisi in famiglia.",
   "start_url": "/home",
   "id": "/home",
   "scope": "/",

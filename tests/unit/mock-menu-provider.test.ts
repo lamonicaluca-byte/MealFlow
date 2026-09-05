@@ -3,13 +3,7 @@ import { describe, expect, it } from "vitest";
 import { MockMenuProvider } from "@/lib/services/menu-generation/mock-provider";
 import { validateGeneratedWeek } from "@/lib/validation/validate-generated-week";
 import { containsTreeNuts } from "@/lib/validation/allergy-guard";
-import {
-  DEMO_DIETARY_PROFILES,
-  DEMO_HOUSEHOLD,
-  DEMO_MEMBERS,
-  DEMO_PANTRY_ITEMS,
-  DEMO_PREFERENCES,
-} from "@/lib/data/demo-household";
+import { DEMO_DIETARY_PROFILES, DEMO_HOUSEHOLD, DEMO_MEMBERS, DEMO_PREFERENCES } from "@/lib/data/demo-household";
 import { DEMO_MEMBER_IDS } from "@/lib/data/demo-ids";
 
 describe("MockMenuProvider.generateWeeklyMenu", () => {
@@ -18,7 +12,6 @@ describe("MockMenuProvider.generateWeeklyMenu", () => {
     members: DEMO_MEMBERS,
     dietaryProfiles: DEMO_DIETARY_PROFILES,
     preferences: DEMO_PREFERENCES,
-    pantryItems: DEMO_PANTRY_ITEMS,
   };
 
   it("genera una settimana valida secondo tutte le regole deterministiche", async () => {

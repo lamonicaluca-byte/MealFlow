@@ -3,7 +3,7 @@
 **Meno decisioni, più tempo insieme.**
 
 MealFlow è un'applicazione web mobile-first per la gestione familiare condivisa
-del menu settimanale, della lista della spesa e della dispensa. Genera un menu
+del menu settimanale e della lista della spesa. Genera un menu
 di ispirazione mediterranea, lo fa approvare da uno dei due adulti responsabili,
 produce automaticamente la lista della spesa e la mantiene sincronizzata in
 tempo reale tra i membri della famiglia — riducendo il carico mentale legato
@@ -30,7 +30,7 @@ dimostrativi (nessuna password richiesta in modalità demo):
 |--------------------|---------------|------------------|------|
 | Luca               | Owner         | Approver         | Accesso completo |
 | Anita              | Admin         | Approver         | Può approvare/modificare il menu |
-| Chalika            | Collaborator  | Viewer sul menu  | Consulta menu/ricette, aggiorna spesa e dispensa, non approva né vede dati sanitari |
+| Chalika            | Collaborator  | Viewer sul menu  | Consulta menu/ricette, aggiorna la spesa, non approva né vede dati sanitari |
 
 Amelia (9 anni) non ha un account: è un profilo alimentare considerato nella
 generazione dei pasti, gestito da Luca e Anita.
@@ -80,7 +80,7 @@ Applica poi le migrazioni in `supabase/migrations/` (istruzioni in
 `supabase/README.md`). Il codice è predisposto con un pattern
 provider/adapter (`RealMenuGenerationAdapter`) e client Supabase separati per
 browser/server (`src/lib/supabase/`), ma **il collegamento end-to-end ai
-repository Supabase per le entità applicative (menu, spesa, dispensa…) non è
+repository Supabase per le entità applicative (menu, spesa…) non è
 stato implementato in questa consegna**: oggi solo `MenuGenerationService` ha
 un adapter reale predisposto (con fallback automatico al mock in caso di
 errore). Collegare le altre entità significa scrivere un repository
@@ -126,11 +126,11 @@ come richiesto: il tema di default è sempre quello scuro).
 ```
 src/
   app/                    # route Next.js (App Router)
-    (app)/                # area autenticata: home, menu, spesa, dispensa...
+    (app)/                # area autenticata: home, menu, spesa...
     login/, onboarding/, invito/[token]/, recupero-password/
   components/
     ui/                   # design system (shadcn/ui personalizzato)
-    layout/, menu/, meal/, shopping/, pantry/, onboarding/, providers/
+    layout/, menu/, meal/, shopping/, onboarding/, providers/
   lib/
     services/menu-generation/  # MenuGenerationService: interfaccia, mock, adapter reale
     validation/                # Zod schema + validazione deterministica (allergie, struttura settimana)
@@ -180,9 +180,9 @@ documentata qui invece che chiesta a voce:
 4. **Ruolo operativo di Chalika.** È impostata come `collaborator` /
    `viewer` (non `editor`): può consultare menu e ricette ma non modificarli
    (niente "cambia piatto", "rigenera", "segna pasto fuori"). I suoi permessi
-   reali su spesa/dispensa (aggiornare stati, aggiungere prodotti, indicare
-   ciò che è già in casa) sono flag granulari indipendenti dal ruolo
-   operativo, per rispettare alla lettera l'elenco del brief (§3).
+   reali sulla lista della spesa (aggiornare stati, aggiungere prodotti) sono
+   flag granulari indipendenti dal ruolo operativo, per rispettare alla
+   lettera l'elenco del brief (§3).
 5. **Sicurezza in modalità demo.** Senza un backend reale non può esistere
    una barriera server-side "vera": le regole di autorizzazione
    (`src/lib/auth/permissions.ts`) sono comunque centralizzate e pure,
@@ -230,6 +230,16 @@ documentata qui invece che chiesta a voce:
     (serve a costruire correttamente la lista della spesa) ma non è più
     esposto nelle schermate di menu/ricetta/alternative, per ridurre il
     numero di informazioni mostrate contemporaneamente.
+15. **Gestione dispensa ("In casa") rimossa.** Su richiesta esplicita, anche
+    questa sezione è stata rimossa: niente più schermata `/dispensa`, voce di
+    navigazione, tipo `PantryItem`/`PantryAvailability`, azioni di store
+    dedicate né passaggio "Dispensa base" nell'onboarding (ridotto a 4
+    passaggi). L'indicatore "Usa prodotti già in casa" e la variante di
+    alternativa "Con ingredienti già presenti" sono stati rimossi di
+    conseguenza, non avendo più una fonte dati da cui derivare. Lo stato
+    "Già in casa" resta comunque disponibile come stato *manuale* di un
+    articolo nella lista della spesa (§12): a sparire è solo il calcolo
+    automatico basato sul confronto con una dispensa dedicata.
 
 ## Accessibilità e sicurezza — punti salienti
 

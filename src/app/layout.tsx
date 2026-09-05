@@ -9,7 +9,7 @@ import { ServiceWorkerRegistration } from "@/components/providers/service-worker
 export const metadata: Metadata = {
   title: "MealFlow — Meno decisioni, più tempo insieme.",
   description:
-    "MealFlow organizza il menu settimanale della famiglia, la lista della spesa e la dispensa, riducendo il carico mentale legato ai pasti.",
+    "MealFlow organizza il menu settimanale della famiglia e la lista della spesa, riducendo il carico mentale legato ai pasti.",
   applicationName: "MealFlow",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

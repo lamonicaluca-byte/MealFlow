@@ -11,7 +11,6 @@ import {
   Info,
   MessageCircle,
   MoreVertical,
-  PackageCheck,
   Pencil,
   RefreshCw,
   Sparkles,
@@ -70,8 +69,7 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
   const mainIngredients = recipe.ingredients.slice(0, 4).map((i) => i.name);
   const visibleAllergens = compact ? recipe.allergens.slice(0, MAX_COMPACT_ALLERGENS) : recipe.allergens;
   const hiddenAllergensCount = compact ? recipe.allergens.length - visibleAllergens.length : 0;
-  const hasIndicators =
-    meal.usesExistingPantryItems.length > 0 || Boolean(meal.childAdaptationNote) || Boolean(meal.chalikaNote) || Boolean(meal.familyNote);
+  const hasIndicators = Boolean(meal.childAdaptationNote) || Boolean(meal.chalikaNote) || Boolean(meal.familyNote);
 
   return (
     <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-card p-4 shadow-editorial transition-shadow hover:shadow-editorial-lg">
@@ -168,9 +166,6 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
         // per non appesantire una colonna stretta. Il dettaglio testuale resta a un clic di distanza.
         hasIndicators && (
           <div className="flex flex-wrap items-center gap-2.5 text-muted-foreground">
-            {meal.usesExistingPantryItems.length > 0 && (
-              <IndicatorIcon icon={PackageCheck} label="Usa prodotti già in casa" className="text-success" />
-            )}
             {meal.childAdaptationNote && (
               <IndicatorIcon icon={Sparkles} label={meal.childAdaptationNote} className="text-crimson" />
             )}
@@ -182,12 +177,6 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
         )
       ) : (
         <>
-          {meal.usesExistingPantryItems.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              <Badge variant="success">Usa prodotti già in casa</Badge>
-            </div>
-          )}
-
           {meal.childAdaptationNote && (
             <p className="rounded-md bg-secondary/60 px-3 py-2 text-xs text-secondary-foreground">
               <Sparkles className="mr-1 inline h-3 w-3 text-crimson" /> {meal.childAdaptationNote}

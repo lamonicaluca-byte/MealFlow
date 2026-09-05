@@ -69,7 +69,6 @@ describe("reconcileShoppingListWithMeals", () => {
       shoppingListId: "list1",
       existingItems: [boughtItem],
       meals: [mealWithIngredient("m1", "carote", 200)], // le zucchine non servono più
-      pantryItems: [],
       now,
     });
 
@@ -103,7 +102,6 @@ describe("reconcileShoppingListWithMeals", () => {
       shoppingListId: "list1",
       existingItems: [notBoughtItem],
       meals: [mealWithIngredient("m1", "zucchine", 300)],
-      pantryItems: [],
       now,
     });
 
@@ -134,7 +132,6 @@ describe("reconcileShoppingListWithMeals", () => {
       shoppingListId: "list1",
       existingItems: [manualItem],
       meals: [],
-      pantryItems: [],
       now,
     });
 

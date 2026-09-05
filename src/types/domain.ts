@@ -446,27 +446,6 @@ export interface ShoppingItemStatusHistoryEntry {
 }
 
 // ---------------------------------------------------------------------------
-// Dispensa e avanzi
-// ---------------------------------------------------------------------------
-
-export type PantryAvailability = "disponibile" | "quasi_finito" | "da_ricomprare";
-
-export interface PantryItem {
-  id: UUID;
-  householdId: UUID;
-  name: string;
-  normalizedName: string;
-  quantity: string | null; // indicativa, testo libero ("circa mezzo pacco")
-  unit: IngredientUnit | null;
-  category: ShoppingCategory;
-  expiresOn: ISODateString | null;
-  availability: PantryAvailability;
-  createdAt: ISODateTimeString;
-  updatedAt: ISODateTimeString;
-  updatedBy: UUID;
-}
-
-// ---------------------------------------------------------------------------
 // Note, notifiche, audit
 // ---------------------------------------------------------------------------
 

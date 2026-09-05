@@ -55,12 +55,6 @@ export function canUpdateShoppingList(role: HouseholdUserRole | undefined): bool
   return Boolean(role.permissions?.canUpdateShoppingList);
 }
 
-export function canMarkPantryItems(role: HouseholdUserRole | undefined): boolean {
-  if (!role) return false;
-  if (role.role === "owner" || role.role === "admin") return true;
-  return Boolean(role.permissions?.canMarkPantryItems);
-}
-
 export function canAddManualShoppingItems(role: HouseholdUserRole | undefined): boolean {
   if (!role) return false;
   if (role.role === "owner" || role.role === "admin") return true;

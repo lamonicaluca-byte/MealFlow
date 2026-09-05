@@ -5,7 +5,6 @@ import type {
   HouseholdPreferences,
   MealChangeReason,
   MealSlot,
-  PantryItem,
   Weekday,
 } from "@/types/domain";
 import type { WeekValidationIssue } from "@/lib/validation/validate-generated-week";
@@ -17,7 +16,6 @@ export interface HouseholdContext {
   members: HouseholdMember[];
   dietaryProfiles: DietaryProfile[];
   preferences: HouseholdPreferences;
-  pantryItems: PantryItem[];
   /** Nomi delle ricette proposte nelle 2-3 settimane precedenti, per limitare le ripetizioni. */
   recentRecipeNames?: string[];
 }
@@ -51,7 +49,6 @@ export type AlternativeKind =
   | "vegetariana"
   | "piu_economica"
   | "sotto_20_minuti"
-  | "ingredienti_presenti"
   | "preparazione_anticipata";
 
 export interface MealAlternative {

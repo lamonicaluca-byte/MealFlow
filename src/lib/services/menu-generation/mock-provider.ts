@@ -130,15 +130,6 @@ function buildChildAdaptationNote(recipe: Recipe, context: HouseholdContext): st
   return `Per ${childMember.displayName}: servire una porzione separata riducendo o omettendo "${problematicIngredient.name}", oppure tritarlo finemente.`;
 }
 
-function computeUsesExistingPantryItems(recipe: Recipe, context: HouseholdContext): string[] {
-  const availableNames = context.pantryItems
-    .filter((p) => p.availability !== "da_ricomprare")
-    .map((p) => p.normalizedName);
-  return recipe.ingredients
-    .filter((ing) => availableNames.some((name) => ing.name.toLowerCase().includes(name) || name.includes(ing.name.toLowerCase())))
-    .map((ing) => ing.name);
-}
-
 function buildGeneratedMeal(
   recipe: Recipe,
   day: Weekday,
@@ -155,7 +146,10 @@ function buildGeneratedMeal(
     chalikaNote: buildChalikaNote(day, context),
     familyNote: null,
     childAdaptationNote: buildChildAdaptationNote(recipe, context),
-    usesExistingPantryItems: computeUsesExistingPantryItems(recipe, context),
+    // La gestione della dispensa ("In casa") è stata rimossa dall'app: questo
+    // campo resta nel modello (usato in passato per la spesa) ma non viene
+    // più valorizzato.
+    usesExistingPantryItems: [],
     usesLeftovers: recipe.usesLeftovers,
   };
 }
@@ -345,13 +339,6 @@ export class MockMenuProvider implements MenuGenerationService {
       const quick = takeUnique(eligible.filter((r) => r.isQuickUnder20));
       if (quick) chosen.push({ kind: "sotto_20_minuti", label: "Pronta in meno di 20 minuti", recipe: toGeneratedRecipe(quick) });
 
-      const withPantry = takeUnique(
-        eligible.filter((r) => computeUsesExistingPantryItems(r, context).length > 0),
-      );
-      if (withPantry) {
-        chosen.push({ kind: "ingredienti_presenti", label: "Con ingredienti già presenti", recipe: toGeneratedRecipe(withPantry) });
-      }
-
       const prepAhead = takeUnique(eligible.filter((r) => r.canPrepareAhead));
       if (prepAhead) {
         chosen.push({ kind: "preparazione_anticipata", label: "Adatta alla preparazione anticipata", recipe: toGeneratedRecipe(prepAhead) });
@@ -391,9 +378,6 @@ export class MockMenuProvider implements MenuGenerationService {
         `"${meal.recipe.name}" è stato scelto per ${meal.slot} di ${meal.day} perché valorizza ${tags || "ingredienti mediterranei di stagione"}.`,
       ];
       if (meal.recipe.canPrepareAhead) parts.push("Può essere preparato in anticipo, per alleggerire i giorni più pieni.");
-      if (meal.usesExistingPantryItems.length > 0) {
-        parts.push(`Usa ingredienti che risultano già in casa: ${meal.usesExistingPantryItems.join(", ")}.`);
-      }
       if (meal.chalikaNote) parts.push(meal.chalikaNote);
       return { ok: true, data: parts.join(" ") };
     } catch (error) {

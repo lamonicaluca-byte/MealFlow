@@ -11,14 +11,12 @@ import { StepFamily } from "@/components/onboarding/step-family";
 import { StepSafety } from "@/components/onboarding/step-safety";
 import { StepPreferences } from "@/components/onboarding/step-preferences";
 import { StepOrganization } from "@/components/onboarding/step-organization";
-import { StepPantry } from "@/components/onboarding/step-pantry";
 
 const STEPS = [
   { title: "Famiglia", component: StepFamily },
   { title: "Sicurezza alimentare", component: StepSafety },
   { title: "Preferenze", component: StepPreferences },
   { title: "Organizzazione", component: StepOrganization },
-  { title: "Dispensa base", component: StepPantry },
 ];
 
 export default function OnboardingPage() {
@@ -27,7 +25,9 @@ export default function OnboardingPage() {
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
   const router = useRouter();
 
-  const [stepIndex, setStepIndex] = React.useState(() => Math.min(Math.max((household?.onboardingStep ?? 1) - 1, 0), 4));
+  const [stepIndex, setStepIndex] = React.useState(() =>
+    Math.min(Math.max((household?.onboardingStep ?? 1) - 1, 0), STEPS.length - 1),
+  );
 
   const StepComponent = STEPS[stepIndex]!.component;
   const isLast = stepIndex === STEPS.length - 1;

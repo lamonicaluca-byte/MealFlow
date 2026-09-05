@@ -39,7 +39,6 @@ export default function PrivacyPage() {
       meals: state.meals,
       shoppingLists: state.shoppingLists,
       shoppingListItems: state.shoppingListItems,
-      pantryItems: state.pantryItems,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -64,9 +63,9 @@ export default function PrivacyPage() {
             <ShieldCheck className="h-4 w-4 text-crimson" /> Minimizzazione dei dati
           </CardTitle>
           <CardDescription>
-            MealFlow conserva solo le informazioni necessarie a organizzare i pasti: profili alimentari, menu, spesa e
-            dispensa. Non registriamo dati clinici oltre ad allergie e intolleranze dichiarate volontariamente, e non
-            li condividiamo con soggetti terzi.
+            MealFlow conserva solo le informazioni necessarie a organizzare i pasti: profili alimentari, menu e spesa.
+            Non registriamo dati clinici oltre ad allergie e intolleranze dichiarate volontariamente, e non li
+            condividiamo con soggetti terzi.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -141,8 +140,8 @@ export default function PrivacyPage() {
                 <DialogHeader>
                   <DialogTitle>Eliminare l'intera famiglia?</DialogTitle>
                   <DialogDescription>
-                    Menu, ricette, spesa, dispensa e profili di tutti i membri verranno rimossi definitivamente. Questa
-                    azione non può essere annullata.
+                    Menu, ricette, spesa e profili di tutti i membri verranno rimossi definitivamente. Questa azione
+                    non può essere annullata.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>

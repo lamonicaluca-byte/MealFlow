@@ -1,4 +1,4 @@
-import type { Meal, PantryItem, ShoppingListItem } from "@/types/domain";
+import type { Meal, ShoppingListItem } from "@/types/domain";
 import { generateId } from "@/lib/utils";
 import { aggregateIngredientLines, type IngredientLine } from "./aggregate-ingredients";
 
@@ -19,10 +19,9 @@ export function reconcileShoppingListWithMeals(params: {
   shoppingListId: string;
   existingItems: ShoppingListItem[];
   meals: Meal[];
-  pantryItems: PantryItem[];
   now: string;
 }): ReconcileResult {
-  const { shoppingListId, existingItems, meals, pantryItems, now } = params;
+  const { shoppingListId, existingItems, meals, now } = params;
 
   const lines: IngredientLine[] = meals.flatMap((meal) =>
     (meal.recipeSnapshot?.ingredients ?? [])
@@ -36,7 +35,6 @@ export function reconcileShoppingListWithMeals(params: {
       })),
   );
   const aggregated = aggregateIngredientLines(lines);
-  const pantryByName = new Map(pantryItems.map((p) => [p.normalizedName, p]));
 
   // Gli articoli manuali non derivano dal menu: si conservano sempre.
   const manualItems = existingItems.filter((i) => i.isManual);
@@ -78,7 +76,6 @@ export function reconcileShoppingListWithMeals(params: {
   // 2) aggiunge i nuovi ingredienti non ancora presenti
   for (const [key, line] of aggregatedByKey.entries()) {
     if (existingByKey.has(key)) continue;
-    const pantryMatch = pantryByName.get(line.normalizedName);
     result.push({
       id: generateId("itm"),
       shoppingListId,
@@ -87,7 +84,7 @@ export function reconcileShoppingListWithMeals(params: {
       quantity: line.quantity,
       unit: line.unit,
       category: line.category,
-      status: line.needsReviewReason ? "da_verificare" : pantryMatch?.availability === "disponibile" ? "gia_in_casa" : "da_comprare",
+      status: line.needsReviewReason ? "da_verificare" : "da_comprare",
       note: null,
       isManual: false,
       sourceMealIds: line.sourceKeys,

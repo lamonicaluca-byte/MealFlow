@@ -18,12 +18,10 @@ import { getMenuGenerationService } from "@/lib/services/menu-generation";
 import type { HouseholdContext } from "@/lib/services/menu-generation/types";
 import type { GeneratedMeal, GeneratedWeek } from "@/lib/validation/menu-schema";
 import { aggregateIngredientLines, type IngredientLine } from "@/lib/shopping/aggregate-ingredients";
-import { normalizeIngredientName } from "@/lib/shopping/normalize-ingredient";
 import {
   DEMO_DIETARY_PROFILES,
   DEMO_HOUSEHOLD,
   DEMO_MEMBERS,
-  DEMO_PANTRY_ITEMS,
   DEMO_PREFERENCES,
   DEMO_ROLES,
   DEMO_USERS,
@@ -39,7 +37,6 @@ function buildHouseholdContext(): HouseholdContext {
     members: DEMO_MEMBERS,
     dietaryProfiles: DEMO_DIETARY_PROFILES,
     preferences: DEMO_PREFERENCES,
-    pantryItems: DEMO_PANTRY_ITEMS,
   };
 }
 
@@ -72,8 +69,6 @@ function buildShoppingListFromMeals(
   weekStartDate: string,
   now: string,
 ): { list: ShoppingList; items: ShoppingListItem[] } {
-  const pantryByName = new Map(DEMO_PANTRY_ITEMS.map((p) => [p.normalizedName, p]));
-
   const lines: IngredientLine[] = meals.flatMap((meal) =>
     (meal.recipeSnapshot?.ingredients ?? [])
       .filter((ing) => !ing.optional)
@@ -90,12 +85,9 @@ function buildShoppingListFromMeals(
   const listId = generateId("shp");
 
   const items: ShoppingListItem[] = aggregated.map((line, index) => {
-    const pantryMatch = pantryByName.get(normalizeIngredientName(line.name));
     let status: ShoppingListItem["status"];
     if (line.needsReviewReason) {
       status = "da_verificare";
-    } else if (pantryMatch?.availability === "disponibile") {
-      status = "gia_in_casa";
     } else {
       // Alterna comprato/da comprare per simulare una spesa già in corso.
       status = index % 2 === 0 ? "comprato" : "da_comprare";
@@ -383,7 +375,6 @@ export async function buildDemoState(): Promise<AppState> {
     shoppingLists: [currentShoppingList],
     shoppingListItems: currentShoppingItems,
     shoppingItemHistory: [],
-    pantryItems: DEMO_PANTRY_ITEMS,
     notes,
     notifications,
     notificationPreferences,

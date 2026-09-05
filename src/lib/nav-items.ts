@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Bell,
-  Boxes,
   Calendar,
   ChefHat,
   Home,
@@ -25,7 +24,6 @@ export const PRIMARY_NAV: NavItem[] = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/menu", label: "Menu", icon: ChefHat },
   { href: "/spesa", label: "Spesa", icon: ShoppingCart },
-  { href: "/dispensa", label: "In casa", icon: Boxes },
 ];
 
 /** Voci secondarie: raccolte nel foglio "Altro" su mobile, elencate nella sidebar su desktop. */

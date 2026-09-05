@@ -13,7 +13,6 @@ import type {
   MealFeedback,
   MenuVersion,
   NotificationPreferences,
-  PantryItem,
   ShoppingItemStatusHistoryEntry,
   ShoppingList,
   ShoppingListItem,
@@ -47,8 +46,6 @@ export interface AppState {
   shoppingLists: ShoppingList[];
   shoppingListItems: ShoppingListItem[];
   shoppingItemHistory: ShoppingItemStatusHistoryEntry[];
-
-  pantryItems: PantryItem[];
 
   notes: HouseholdNote[];
   notifications: AppNotification[];

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Bell, Boxes, CalendarClock, ChefHat, ChevronRight, ListChecks, ShoppingCart, Sparkles } from "lucide-react";
+import { Bell, CalendarClock, ChefHat, ChevronRight, ListChecks, ShoppingCart, Sparkles, Users } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -168,9 +168,9 @@ export default function HomePage() {
       <div>
         <p className="mb-2 text-sm font-medium text-muted-foreground">Accessi rapidi</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <QuickLink href="/dispensa" label="In casa" icon={Boxes} />
           <QuickLink href="/calendario" label="Calendario" icon={CalendarClock} />
           <QuickLink href="/storico" label="Storico" icon={ListChecks} />
+          <QuickLink href="/profili" label="Profili" icon={Users} />
           <QuickLink href="/notifiche" label="Notifiche" icon={Bell} />
         </div>
       </div>
