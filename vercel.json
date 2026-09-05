@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/keep-alive",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/generate-next-week",
+      "schedule": "0 7 * * 4"
     }
   ]
 }

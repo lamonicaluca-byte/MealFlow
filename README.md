@@ -164,6 +164,13 @@ dalla modalità demo a un backend Supabase reale:
 - **Keep-alive automatico**: un Vercel Cron Job (`vercel.json`) chiama
   `/api/cron/keep-alive` ogni giorno per evitare che il progetto Supabase
   free tier vada in pausa per inattività.
+- **Generazione anticipata della settimana successiva**: un secondo Cron
+  Job chiama `/api/cron/generate-next-week` ogni giovedì, per ogni
+  famiglia, così il menu è pronto da approvare con qualche giorno di
+  anticipo sul giorno della spesa, senza dover aspettare che qualcuno apra
+  l'app. Stessa logica di bootstrap di `/api/menu/ensure` (condivisa in
+  `src/lib/menu/generate-and-save-week.ts`), idempotente: se il menu esiste
+  già, non fa nulla.
 
 Cosa **non** è ancora collegato: gli inviti restano "un clic" solo nella UI
 (non esiste ancora il flusso che, all'accettazione, crea davvero un nuovo
