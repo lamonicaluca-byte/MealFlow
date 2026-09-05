@@ -6,6 +6,7 @@ import { CheckCircle2, ShieldAlert } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { canApproveMenu } from "@/lib/auth/permissions";
+import { formatDateDisplay } from "@/lib/utils";
 import { getMealsForVersion } from "@/lib/selectors/menu-selectors";
 import { WeeklyMenuView } from "@/components/menu/weekly-menu-view";
 import { MenuStatusBadge } from "@/components/menu/menu-status-badge";
@@ -48,7 +49,7 @@ export default function MenuApprovalPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <MenuStatusBadge status={pendingMenu.status} />
-        <span className="text-xs text-muted-foreground">Settimana del {pendingMenu.weekStartDate}</span>
+        <span className="text-xs text-muted-foreground">Settimana del {formatDateDisplay(pendingMenu.weekStartDate)}</span>
       </div>
 
       {!canApprove && (

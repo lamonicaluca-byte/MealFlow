@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Bell, BellOff, CheckCheck } from "lucide-react";
+import { format } from "date-fns";
 
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -47,7 +48,7 @@ export default function NotificationsPage() {
             <div>
               <p className="text-sm font-medium">{n.title}</p>
               <p className="text-xs text-muted-foreground">{n.body}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">{new Date(n.createdAt).toLocaleString("it-IT")}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{format(new Date(n.createdAt), "dd-MM-yyyy HH:mm")}</p>
             </div>
           </Link>
         ))}

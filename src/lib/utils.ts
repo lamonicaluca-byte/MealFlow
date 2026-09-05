@@ -23,3 +23,15 @@ export function capitalize(value: string): string {
   if (!value) return value;
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+/**
+ * Converte una data pura ("YYYY-MM-DD", il formato usato ovunque per lo
+ * storage/i confronti) nel formato "DD-MM-YYYY" richiesto per la
+ * visualizzazione. Usare SOLO per il testo mostrato all'utente: il formato
+ * interno resta sempre ISO (ordinabile con un confronto tra stringhe).
+ */
+export function formatDateDisplay(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  if (!year || !month || !day) return isoDate;
+  return `${day}-${month}-${year}`;
+}

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { History } from "lucide-react";
+import { format } from "date-fns";
 
 import { useAppStore } from "@/store/app-store";
+import { formatDateDisplay } from "@/lib/utils";
 import { MenuStatusBadge } from "@/components/menu/menu-status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +32,7 @@ export default function MenuHistoryPage() {
             <Card key={menu.id}>
               <CardContent className="space-y-3 pt-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-display text-lg font-semibold">Settimana del {menu.weekStartDate}</p>
+                  <p className="font-display text-lg font-semibold">Settimana del {formatDateDisplay(menu.weekStartDate)}</p>
                   <MenuStatusBadge status={menu.status} />
                 </div>
                 <ul className="space-y-2">
@@ -47,7 +49,7 @@ export default function MenuHistoryPage() {
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {v.approvedAt ? `Approvata il ${new Date(v.approvedAt).toLocaleString("it-IT")}` : "In attesa di approvazione"}
+                          {v.approvedAt ? `Approvata il ${format(new Date(v.approvedAt), "dd-MM-yyyy HH:mm")}` : "In attesa di approvazione"}
                           {v.changeReason ? ` · ${v.changeReason}` : ""}
                         </p>
                       </div>

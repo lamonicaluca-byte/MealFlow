@@ -3,6 +3,7 @@
 import { CalendarClock, ShoppingCart } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
+import { formatDateDisplay } from "@/lib/utils";
 import { getMealsForVersion, groupMealsByDay } from "@/lib/selectors/menu-selectors";
 import { MEAL_SLOT_LABELS, WEEKDAY_LABELS } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ export default function CalendarPage() {
             <CardContent className="flex flex-wrap items-start justify-between gap-3 pt-5">
               <div>
                 <p className="font-display text-lg font-semibold">
-                  {WEEKDAY_LABELS[day]} <span className="font-sans text-xs font-normal text-muted-foreground">{date}</span>
+                  {WEEKDAY_LABELS[day]} <span className="font-sans text-xs font-normal text-muted-foreground">{formatDateDisplay(date)}</span>
                 </p>
                 <ul className="mt-1 space-y-0.5 text-sm text-muted-foreground">
                   {dayMeals.map((meal) => (

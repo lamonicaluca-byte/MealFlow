@@ -1,34 +1,29 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
-import { ArrowLeft, ChefHat, MessageSquare } from "lucide-react";
+import { ArrowLeft, ChefHat } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { canEditMenu, canViewOperationalNotes } from "@/lib/auth/permissions";
+import { canEditMenu } from "@/lib/auth/permissions";
 import { MEAL_SLOT_LABELS, WEEKDAY_LABELS, type MealFeedbackTag } from "@/types/domain";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MealFeedbackForm } from "@/components/meal/meal-feedback-form";
 
 export default function MealDetailPage() {
   const params = useParams<{ mealId: string }>();
   const meals = useAppStore((s) => s.meals);
-  const addMealNote = useAppStore((s) => s.addMealNote);
   const submitMealFeedback = useAppStore((s) => s.submitMealFeedback);
   const { user, role } = useCurrentUser();
 
   const meal = meals.find((m) => m.id === params.mealId);
-  const [note, setNote] = React.useState(meal?.familyNote ?? "");
 
   if (!meal) return notFound();
   const recipe = meal.recipeSnapshot;
   const canEdit = canEditMenu(role);
-  const canSeeNotes = canViewOperationalNotes(role);
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -58,22 +53,6 @@ export default function MealDetailPage() {
           </Button>
         )}
       </div>
-
-      {canSeeNotes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <MessageSquare className="h-4 w-4" /> Indicazioni familiari
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Es. Serviamo prima gli antipasti, oppure orario diverso dal solito." />
-            <Button size="sm" onClick={() => user && addMealNote(meal.id, note, "family", user.id)}>
-              Salva nota
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>

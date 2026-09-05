@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { useAppStore } from "@/store/app-store";
+import { formatDateDisplay } from "@/lib/utils";
 import { getMealsForVersion } from "@/lib/selectors/menu-selectors";
 import { WeeklyMenuView } from "@/components/menu/weekly-menu-view";
 import { MenuStatusBadge } from "@/components/menu/menu-status-badge";
@@ -38,7 +39,7 @@ export default function MenuPage() {
           <TabsList>
             {sorted.map((menu) => (
               <TabsTrigger key={menu.id} value={menu.id}>
-                Settimana del {menu.weekStartDate}
+                Settimana del {formatDateDisplay(menu.weekStartDate)}
               </TabsTrigger>
             ))}
           </TabsList>

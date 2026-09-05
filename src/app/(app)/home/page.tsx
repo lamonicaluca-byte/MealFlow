@@ -12,6 +12,7 @@ import { getMealsForVersion, getNextMeal } from "@/lib/selectors/menu-selectors"
 import { computeHomePriority } from "@/lib/home/home-priority";
 import { MEAL_SLOT_LABELS, WEEKDAY_LABELS } from "@/types/domain";
 import { canViewOperationalNotes } from "@/lib/auth/permissions";
+import { formatDateDisplay } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -139,7 +140,7 @@ export default function HomePage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {currentMenu && (
-                <Badge variant="secondary">Settimana del {currentMenu.weekStartDate}</Badge>
+                <Badge variant="secondary">Settimana del {formatDateDisplay(currentMenu.weekStartDate)}</Badge>
               )}
               {nextWeekMenu && <Badge variant="warning">Da approvare</Badge>}
             </div>
