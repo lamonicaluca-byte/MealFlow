@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   CalendarClock,
   ChefHat,
   Clock,
@@ -33,7 +34,6 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { canEditMenu } from "@/lib/auth/permissions";
 
 const DIFFICULTY_LABEL: Record<string, string> = { facile: "Facile", media: "Media", impegnativa: "Impegnativa" };
-const MAX_COMPACT_ALLERGENS = 2;
 
 /** Icona indicatore con etichetta accessibile (tooltip nativo + screen reader). */
 function IndicatorIcon({
@@ -66,19 +66,27 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
   if (!recipe) return null;
 
   const mainIngredients = recipe.ingredients.slice(0, 4).map((i) => i.name);
-  const visibleAllergens = compact ? recipe.allergens.slice(0, MAX_COMPACT_ALLERGENS) : recipe.allergens;
-  const hiddenAllergensCount = compact ? recipe.allergens.length - visibleAllergens.length : 0;
   const hasIndicators = Boolean(meal.childAdaptationNote) || Boolean(meal.chalikaNote);
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-card p-4 shadow-editorial transition-shadow hover:shadow-editorial-lg">
+    <div
+      className={cn(
+        "flex flex-col rounded-lg border border-border bg-card shadow-editorial transition-shadow hover:shadow-editorial-lg",
+        compact ? "gap-2 p-3" : "gap-2.5 p-4",
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-eyebrow">
-            {WEEKDAY_LABELS[meal.day]} · {MEAL_SLOT_LABELS[meal.slot]}
-          </p>
-          <h3 className={cn("font-display font-semibold leading-snug", compact ? "text-lg" : "text-xl")}>
-            <span className="mr-1.5 text-2xl">{recipe.imageEmoji}</span>
+          {/* In versione compatta il giorno è già nell'intestazione della colonna: qui basta lo slot. */}
+          <p className="text-eyebrow">{compact ? MEAL_SLOT_LABELS[meal.slot] : `${WEEKDAY_LABELS[meal.day]} · ${MEAL_SLOT_LABELS[meal.slot]}`}</p>
+          <h3
+            title={compact ? recipe.name : undefined}
+            className={cn(
+              "font-display font-semibold",
+              compact ? "line-clamp-2 text-sm leading-snug" : "text-xl leading-snug",
+            )}
+          >
+            <span className={cn("mr-1", compact ? "text-base" : "mr-1.5 text-2xl")}>{recipe.imageEmoji}</span>
             {recipe.name}
           </h3>
         </div>
@@ -147,16 +155,25 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
             <CalendarClock className="h-3.5 w-3.5" /> Anticipabile
           </span>
         )}
+        {/* Compatto: un'icona con conteggio invece di un badge per allergene, per non occupare una riga intera in una colonna stretta (elenco completo nel tooltip). */}
+        {compact && recipe.allergens.length > 0 && (
+          <span
+            className="flex items-center gap-1 text-warning"
+            title={`Allergeni: ${recipe.allergens.join(", ")}`}
+            aria-label={`Allergeni: ${recipe.allergens.join(", ")}`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" /> {recipe.allergens.length}
+          </span>
+        )}
       </div>
 
-      {visibleAllergens.length > 0 && (
+      {!compact && recipe.allergens.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {visibleAllergens.map((a) => (
+          {recipe.allergens.map((a) => (
             <Badge key={a} variant="warning">
               {a}
             </Badge>
           ))}
-          {hiddenAllergensCount > 0 && <Badge variant="warning">+{hiddenAllergensCount}</Badge>}
         </div>
       )}
 
