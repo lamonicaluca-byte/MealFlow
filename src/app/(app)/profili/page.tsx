@@ -6,6 +6,7 @@ import { canEditAllergiesAndRoles } from "@/lib/auth/permissions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { DietarySafetyEditor } from "@/components/profile/dietary-safety-editor";
 
 const ROLE_LABEL: Record<string, string> = { owner: "Owner", admin: "Admin", collaborator: "Collaborator" };
 const OP_ROLE_LABEL: Record<string, string> = { approver: "Approver", editor: "Editor", viewer: "Viewer" };
@@ -45,23 +46,7 @@ export default function ProfilesPage() {
                     {memberRole && <Badge variant="secondary">{ROLE_LABEL[memberRole.role]}</Badge>}
                     {memberRole && <Badge variant="outline">{OP_ROLE_LABEL[memberRole.operationalRole]}</Badge>}
                   </div>
-                  {profile && canSeeAllergies && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {profile.allergies.map((a) => (
-                        <Badge key={a.id} variant="destructive">
-                          Allergia: {a.allergen}
-                        </Badge>
-                      ))}
-                      {profile.intolerances.map((i) => (
-                        <Badge key={i.id} variant="warning">
-                          Intolleranza: {i.substance}
-                        </Badge>
-                      ))}
-                      {profile.allergies.length === 0 && profile.intolerances.length === 0 && (
-                        <span className="text-xs text-muted-foreground">Nessuna allergia o intolleranza nota.</span>
-                      )}
-                    </div>
-                  )}
+                  {profile && canSeeAllergies && <DietarySafetyEditor memberId={member.id} profile={profile} />}
                   {profile?.preferredDishes.length ? (
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Piatti preferiti: </span>

@@ -46,7 +46,10 @@ const config: Config = {
         crimson: {
           DEFAULT: "hsl(var(--crimson))",
           foreground: "hsl(var(--crimson-foreground))",
-          muted: "hsl(var(--crimson-muted))",
+          muted: {
+            DEFAULT: "hsl(var(--crimson-muted))",
+            foreground: "hsl(var(--crimson-muted-foreground))",
+          },
         },
         maiolica: {
           DEFAULT: "hsl(var(--maiolica-blue))",

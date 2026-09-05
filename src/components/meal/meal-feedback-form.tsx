@@ -40,7 +40,7 @@ export function MealFeedbackForm({ onSubmit }: { onSubmit: (tags: MealFeedbackTa
             className={cn(
               "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
               selected.includes(opt.value)
-                ? "border-crimson bg-crimson-muted text-crimson"
+                ? "border-crimson bg-crimson-muted text-crimson-muted-foreground"
                 : "border-border text-muted-foreground hover:border-crimson/40",
             )}
           >

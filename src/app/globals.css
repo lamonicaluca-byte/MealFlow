@@ -46,6 +46,12 @@
     --crimson: 350 62% 42%;
     --crimson-foreground: 40 30% 97%;
     --crimson-muted: 350 38% 20%;
+    /* Testo su sfondo --crimson-muted (bottone "subtle", badge di default,
+       voce di navigazione attiva): --crimson da solo dà un contrasto di
+       circa 2.1:1 su questo sfondo scuro, sotto la soglia WCAG AA (4.5:1)
+       per testo normale. Un rosso più chiaro qui risolve senza toccare
+       --crimson, usato ovunque altrove (link, icone) su sfondo pieno. */
+    --crimson-muted-foreground: 350 55% 74%;
 
     --maiolica-blue: 205 50% 46%;
     --maiolica-blue-deep: 205 55% 26%;
@@ -93,6 +99,9 @@
     --crimson: 350 63% 38%;
     --crimson-foreground: 40 30% 98%;
     --crimson-muted: 350 48% 92%;
+    /* Qui --crimson-muted è chiarissimo (92% di luminosità): --crimson ci
+       contrasta già a oltre 6:1, nessun aggiustamento necessario. */
+    --crimson-muted-foreground: 350 63% 38%;
 
     --maiolica-blue: 205 62% 36%;
     --maiolica-blue-deep: 205 66% 22%;

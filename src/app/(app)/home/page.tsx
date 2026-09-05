@@ -11,7 +11,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { getMealsForVersion, getNextMeal } from "@/lib/selectors/menu-selectors";
 import { computeHomePriority } from "@/lib/home/home-priority";
 import { MEAL_SLOT_LABELS, WEEKDAY_LABELS } from "@/types/domain";
-import { canViewOperationalNotes } from "@/lib/auth/permissions";
+import { canApproveMenu, canViewOperationalNotes } from "@/lib/auth/permissions";
 import { formatDateDisplay } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,13 @@ export default function HomePage() {
     hasItemsLeftToBuy: missingCount > 0,
   });
   const copy = PRIORITY_COPY[priority.kind]!;
+  // "Approva ora" promette un'azione che un non-approver (es. Chalika) non
+  // può compiere: la pagina di destinazione glielo spiegherebbe solo dopo
+  // il click (vedi menu/approvazione/page.tsx). Meglio non promettere
+  // un'azione che non può fare: per chi non approva, sempre "Controlla il
+  // menu", a prescindere dal giorno/urgenza.
+  const canApprove = canApproveMenu(role);
+  const cta = priority.kind === "approval_pending" && !canApprove ? "Controlla il menu" : copy.cta;
 
   const canSeeNotes = canViewOperationalNotes(role);
   const chalikaUpdates = notes.filter((n) => n.authorName === "Chalika").slice(0, 3);
@@ -103,7 +110,7 @@ export default function HomePage() {
           </div>
           <Button asChild size="sm">
             <Link href={priority.kind === "next_meal" && nextMeal ? `/menu/${nextMeal.id}` : copy.href}>
-              {copy.cta} <ChevronRight className="ml-1 h-3.5 w-3.5" />
+              {cta} <ChevronRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </Button>
         </CardContent>

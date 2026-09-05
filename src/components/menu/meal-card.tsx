@@ -10,8 +10,8 @@ import {
   Flame,
   Home,
   MessageCircle,
+  MessageSquare,
   MoreVertical,
-  Pencil,
   RefreshCw,
   Sparkles,
   Trash2,
@@ -22,6 +22,7 @@ import { MEAL_SLOT_LABELS, WEEKDAY_LABELS } from "@/types/domain";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,9 +70,9 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
   const hasIndicators = Boolean(meal.childAdaptationNote) || Boolean(meal.chalikaNote);
 
   return (
-    <div
+    <Card
       className={cn(
-        "flex flex-col rounded-lg border border-border bg-card shadow-editorial transition-shadow hover:shadow-editorial-lg",
+        "flex flex-col transition-shadow hover:shadow-editorial-lg",
         compact ? "gap-2 p-3" : "gap-2.5 p-4",
       )}
     >
@@ -97,8 +98,11 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {/* La pagina di dettaglio pasto oggi contiene solo azioni ricetta e il
+                feedback: l'etichetta riflette questo, non promette più
+                "commensali/note" (rimossi, vedi commit precedente). */}
             <DropdownMenuItem onSelect={() => router.push(`/menu/${meal.id}`)}>
-              <Pencil className="mr-2 h-3.5 w-3.5" /> Modifica commensali / note
+              <MessageSquare className="mr-2 h-3.5 w-3.5" /> Dettagli e feedback
             </DropdownMenuItem>
             {canEdit && (
               <DropdownMenuItem onSelect={() => router.push(`/menu/${meal.id}/alternative`)}>
@@ -218,7 +222,7 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
           </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 

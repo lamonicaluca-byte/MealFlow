@@ -24,7 +24,10 @@ export function MobileBottomNav() {
                 href={item.href}
                 className={cn(
                   "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium tracking-wide transition-colors",
-                  active ? "text-crimson" : "text-muted-foreground",
+                  // text-crimson-muted-foreground (non text-crimson): stesso
+                  // rosso reso più chiaro per restare leggibile su questo
+                  // sfondo scuro (vedi il token in globals.css).
+                  active ? "text-crimson-muted-foreground" : "text-muted-foreground",
                 )}
               >
                 <item.icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.75} />

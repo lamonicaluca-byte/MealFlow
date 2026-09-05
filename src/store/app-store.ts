@@ -3,12 +3,17 @@
 import { create } from "zustand";
 
 import type {
+  Allergy,
+  AllergySeverity,
   AppNotification,
   DietaryProfile,
+  DietaryRestriction,
+  Dislike,
   HouseholdNote,
   HouseholdPreferences,
   HouseholdRole,
   HouseholdSettings,
+  Intolerance,
   Invitation,
   Meal,
   MealAttendance,
@@ -66,6 +71,14 @@ interface Actions {
   updateHouseholdName: (name: string) => void;
   updateHouseholdSettings: (patch: Partial<HouseholdSettings>) => void;
   updateDietaryProfile: (memberId: string, patch: Partial<DietaryProfile>) => void;
+  addAllergy: (memberId: string, allergen: string, severity: AllergySeverity, notes: string | null) => void;
+  removeAllergy: (memberId: string, allergyId: string) => void;
+  addIntolerance: (memberId: string, substance: string, notes: string | null) => void;
+  removeIntolerance: (memberId: string, intoleranceId: string) => void;
+  addDietaryRestriction: (memberId: string, ingredient: string, reason: string | null) => void;
+  removeDietaryRestriction: (memberId: string, restrictionId: string) => void;
+  addDislike: (memberId: string, ingredientOrDish: string) => void;
+  removeDislike: (memberId: string, dislikeId: string) => void;
   updatePreferences: (patch: Partial<HouseholdPreferences>) => void;
 
   inviteMember: (email: string, role: HouseholdRole, operationalRole: OperationalRole, actorId: string) => void;
@@ -146,11 +159,27 @@ function buildRecentFeedback(state: AppState): RecipeFeedbackNote[] {
 
 function saveToStorage(state: AppState) {
   if (typeof window === "undefined") return;
+  // In produzione (Supabase configurato) i dati vivono sul database, non in
+  // localStorage: scriverli comunque significherebbe tenere su disco, senza
+  // motivo e a tempo indeterminato, dati sensibili della famiglia (allergie,
+  // note su Amelia, lista della spesa). localStorage qui serve SOLO da
+  // persistenza per la modalità demo (nessun backend reale dietro).
+  if (isSupabaseConfigured()) return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Storage pieno o non disponibile (es. modalità privata): la sessione
     // resta funzionante in memoria, si perderà solo la persistenza tra reload.
+  }
+}
+
+/** Rimuove ogni traccia dello stato demo da localStorage (logout, sia demo che produzione). */
+function clearStorage() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage non disponibile: nulla da ripulire.
   }
 }
 
@@ -337,6 +366,10 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
       const supabase = createSupabaseBrowserClient();
       await supabase?.auth.signOut();
       set({ ...initialState, status: "ready" });
+      // Ripulisce anche eventuali dati scritti da sessioni precedenti a
+      // questo fix (saveToStorage ora non scrive più nulla in produzione,
+      // ma su un dispositivo già usato prima potrebbe restarci qualcosa).
+      clearStorage();
       return;
     }
     set({ currentUserId: null });
@@ -498,6 +531,119 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
           .eq("id", profile.id),
       );
     }
+    saveToStorage(get());
+  },
+
+  // --- Allergie/intolleranze/esclusioni/avversioni (§3, §20): sola aggiunta
+  // e rimozione per id, mai un "sostituisci tutta la lista", per non poter
+  // mai perdere per errore un campo (es. gravità, nota) di un elemento che
+  // l'utente non intendeva toccare. Solo owner/admin le vedono/modificano in
+  // UI (`canEditAllergiesAndRoles`); lo stesso vincolo è applicato dalla RLS.
+  addAllergy(memberId, allergen, severity, notes) {
+    const state = get();
+    const profile = state.dietaryProfiles.find((p) => p.memberId === memberId);
+    if (!profile) return;
+    const allergy: Allergy = { id: generateId(), allergen, severity, notes };
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, allergies: [...p.allergies, allergy] } : p,
+      ),
+    });
+    syncSupabase((supabase) =>
+      supabase.from("allergies").insert({ id: allergy.id, dietary_profile_id: profile.id, allergen, severity, notes }),
+    );
+    saveToStorage(get());
+  },
+
+  removeAllergy(memberId, allergyId) {
+    const state = get();
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, allergies: p.allergies.filter((a) => a.id !== allergyId) } : p,
+      ),
+    });
+    syncSupabase((supabase) => supabase.from("allergies").delete().eq("id", allergyId));
+    saveToStorage(get());
+  },
+
+  addIntolerance(memberId, substance, notes) {
+    const state = get();
+    const profile = state.dietaryProfiles.find((p) => p.memberId === memberId);
+    if (!profile) return;
+    const intolerance: Intolerance = { id: generateId(), substance, notes };
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, intolerances: [...p.intolerances, intolerance] } : p,
+      ),
+    });
+    syncSupabase((supabase) =>
+      supabase.from("intolerances").insert({ id: intolerance.id, dietary_profile_id: profile.id, substance, notes }),
+    );
+    saveToStorage(get());
+  },
+
+  removeIntolerance(memberId, intoleranceId) {
+    const state = get();
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, intolerances: p.intolerances.filter((i) => i.id !== intoleranceId) } : p,
+      ),
+    });
+    syncSupabase((supabase) => supabase.from("intolerances").delete().eq("id", intoleranceId));
+    saveToStorage(get());
+  },
+
+  addDietaryRestriction(memberId, ingredient, reason) {
+    const state = get();
+    const profile = state.dietaryProfiles.find((p) => p.memberId === memberId);
+    if (!profile) return;
+    const restriction: DietaryRestriction = { id: generateId(), ingredient, reason };
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, restrictions: [...p.restrictions, restriction] } : p,
+      ),
+    });
+    syncSupabase((supabase) =>
+      supabase.from("dietary_restrictions").insert({ id: restriction.id, dietary_profile_id: profile.id, ingredient, reason }),
+    );
+    saveToStorage(get());
+  },
+
+  removeDietaryRestriction(memberId, restrictionId) {
+    const state = get();
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, restrictions: p.restrictions.filter((r) => r.id !== restrictionId) } : p,
+      ),
+    });
+    syncSupabase((supabase) => supabase.from("dietary_restrictions").delete().eq("id", restrictionId));
+    saveToStorage(get());
+  },
+
+  addDislike(memberId, ingredientOrDish) {
+    const state = get();
+    const profile = state.dietaryProfiles.find((p) => p.memberId === memberId);
+    if (!profile) return;
+    const dislike: Dislike = { id: generateId(), ingredientOrDish };
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, dislikes: [...p.dislikes, dislike] } : p,
+      ),
+    });
+    syncSupabase((supabase) =>
+      supabase.from("dislikes").insert({ id: dislike.id, dietary_profile_id: profile.id, ingredient_or_dish: ingredientOrDish }),
+    );
+    saveToStorage(get());
+  },
+
+  removeDislike(memberId, dislikeId) {
+    const state = get();
+    set({
+      dietaryProfiles: state.dietaryProfiles.map((p) =>
+        p.memberId === memberId ? { ...p, dislikes: p.dislikes.filter((d) => d.id !== dislikeId) } : p,
+      ),
+    });
+    syncSupabase((supabase) => supabase.from("dislikes").delete().eq("id", dislikeId));
     saveToStorage(get());
   },
 

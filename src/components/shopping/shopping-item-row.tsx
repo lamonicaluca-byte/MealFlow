@@ -69,7 +69,13 @@ export function ShoppingItemRow({ item }: { item: ShoppingListItem }) {
         isBought && "opacity-60",
       )}
     >
-      <Checkbox checked={isBought} onCheckedChange={toggleBought} disabled={!canEdit} aria-label="Segna come comprato" />
+      {/* La checkbox nativa è 20×20px, sotto i 44×44px raccomandati per il
+          tocco: <label> (un button è "labelable" per spec HTML, quindi il
+          click viene inoltrato) allarga l'area cliccabile senza dover
+          ingrandire visivamente la checkbox stessa. */}
+      <label className={cn("flex h-11 w-11 shrink-0 items-center justify-center", canEdit ? "cursor-pointer" : "cursor-not-allowed")}>
+        <Checkbox checked={isBought} onCheckedChange={toggleBought} disabled={!canEdit} aria-label="Segna come comprato" />
+      </label>
 
       <div className="min-w-0 flex-1">
         <p className={cn("truncate text-sm font-medium", isBought && "line-through")}>{item.name}</p>
