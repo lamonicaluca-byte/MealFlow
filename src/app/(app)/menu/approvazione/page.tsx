@@ -65,7 +65,7 @@ export default function MenuApprovalPage() {
         <p className="text-xs text-muted-foreground">Ultima modifica: {version.changeReason}</p>
       )}
 
-      <WeeklyMenuView meals={versionMeals} />
+      <WeeklyMenuView meals={versionMeals} weekStartDate={pendingMenu.weekStartDate} />
 
       {canApprove && (
         <div className="sticky bottom-20 flex justify-end md:bottom-4">

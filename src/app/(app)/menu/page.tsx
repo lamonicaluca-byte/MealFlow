@@ -52,7 +52,11 @@ export default function MenuPage() {
                 <MenuStatusBadge status={menu.status} />
                 <AddManualLunchDialog weekdayMeals={versionMeals} />
               </div>
-              <WeeklyMenuView meals={versionMeals} pendingApprovalHint={menu.status === "pending_approval"} />
+              <WeeklyMenuView
+                meals={versionMeals}
+                weekStartDate={menu.weekStartDate}
+                pendingApprovalHint={menu.status === "pending_approval"}
+              />
             </TabsContent>
           );
         })}

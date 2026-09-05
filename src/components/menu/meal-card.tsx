@@ -217,7 +217,11 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
         </>
       )}
 
-      <div className="flex gap-2 pt-1">
+      {/* mt-auto: se la card viene allungata da CSS Grid per pareggiare
+          l'altezza delle altre nella stessa riga (griglia desktop), lo
+          spazio in più va qui, non a spaccare il resto del contenuto: il
+          pulsante resta sempre ancorato in fondo. */}
+      <div className="mt-auto flex gap-2 pt-1">
         <Button asChild size="sm" variant="outline" className="flex-1">
           <Link href={`/menu/${meal.id}/ricetta`}>Apri ricetta</Link>
         </Button>
