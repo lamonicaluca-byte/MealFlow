@@ -1,6 +1,6 @@
 import type { Meal, ShoppingListItem } from "@/types/domain";
 import { generateId } from "@/lib/utils";
-import { aggregateIngredientLines, type IngredientLine } from "./aggregate-ingredients";
+import { aggregateIngredientLines, mergeQuantities, type IngredientLine } from "./aggregate-ingredients";
 
 export interface ReconcileResult {
   items: ShoppingListItem[];
@@ -13,7 +13,10 @@ export interface ReconcileResult {
  * Ricalcola la lista della spesa quando il menu approvato viene modificato
  * (§13): aggiunge i nuovi ingredienti, segnala quelli non più necessari,
  * conserva SEMPRE gli articoli già comprati (anche se non più richiesti) ed
- * evita duplicati confrontando per nome normalizzato + reparto.
+ * evita duplicati confrontando per nome normalizzato + reparto. Un
+ * ingrediente richiesto dal menu che coincide (per nome normalizzato) con un
+ * articolo già aggiunto a mano viene assorbito lì, sommando le quantità
+ * quando possibile: mai due righe per lo stesso prodotto.
  */
 export function reconcileShoppingListWithMeals(params: {
   shoppingListId: string;
@@ -42,11 +45,19 @@ export function reconcileShoppingListWithMeals(params: {
 
   const aggregatedByKey = new Map(aggregated.map((line) => [`${line.normalizedName}|${line.category}`, line]));
   const existingByKey = new Map(menuDerivedItems.map((item) => [`${item.normalizedName}|${item.category}`, item]));
+  // Per il controllo incrociato con gli articoli manuali si ignora il
+  // reparto (categoria): agli occhi di chi fa la spesa "zucchine" è lo
+  // stesso prodotto sia che sia stato scritto a mano sia che arrivi dal
+  // menu, anche se per errore finisse in un reparto diverso.
+  const manualByNormalizedName = new Map(manualItems.map((item) => [item.normalizedName, item]));
 
-  const result: ShoppingListItem[] = [...manualItems];
+  const result: ShoppingListItem[] = [];
   const added: string[] = [];
   const keptButNoLongerNeeded: string[] = [];
   const removed: string[] = [];
+  // Ingredienti del menu già assorbiti in un articolo manuale esistente:
+  // non devono generare ANCHE una riga separata al punto 2.
+  const absorbedIntoManual = new Set<string>();
 
   // 1) aggiorna/mantiene gli articoli già esistenti derivati dal menu
   for (const [key, existing] of existingByKey.entries()) {
@@ -73,9 +84,15 @@ export function reconcileShoppingListWithMeals(params: {
     }
   }
 
-  // 2) aggiunge i nuovi ingredienti non ancora presenti
+  // 2) aggiunge i nuovi ingredienti non ancora presenti — a meno che un
+  // articolo manuale non copra già lo stesso prodotto: in quel caso si
+  // assorbe lì (punto 3), mai una seconda riga per lo stesso ingrediente.
   for (const [key, line] of aggregatedByKey.entries()) {
     if (existingByKey.has(key)) continue;
+    if (manualByNormalizedName.has(line.normalizedName)) {
+      absorbedIntoManual.add(line.normalizedName);
+      continue;
+    }
     result.push({
       id: generateId("itm"),
       shoppingListId,
@@ -94,6 +111,25 @@ export function reconcileShoppingListWithMeals(params: {
       createdBy: "system",
     });
     added.push(line.name);
+  }
+
+  // 3) riporta gli articoli manuali, assorbendo la quantità richiesta dal
+  // menu quando coincide con lo stesso prodotto (mai una riga duplicata).
+  for (const manual of manualItems) {
+    const menuLine = aggregated.find((l) => l.normalizedName === manual.normalizedName);
+    if (!menuLine || !absorbedIntoManual.has(manual.normalizedName)) {
+      result.push(manual);
+      continue;
+    }
+    const merged = mergeQuantities(manual, menuLine.quantity, menuLine.unit);
+    result.push({
+      ...manual,
+      quantity: merged.quantity,
+      unit: merged.unit,
+      needsReviewReason: merged.needsReviewReason,
+      sourceMealIds: Array.from(new Set([...manual.sourceMealIds, ...menuLine.sourceKeys])),
+      updatedAt: now,
+    });
   }
 
   return { items: result, added, keptButNoLongerNeeded, removed };

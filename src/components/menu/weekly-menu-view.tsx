@@ -13,12 +13,16 @@ import { Button } from "@/components/ui/button";
 
 const SLOT_ORDER: MealSlot[] = ["colazione", "pranzo", "cena"];
 
-// Stessa classe di griglia per l'intestazione dei giorni e ogni riga pasto,
-// così le colonne restano allineate tra le due: 4 colonne fino a "2xl"
-// (1536px) — a 7 colonne il contenuto di ogni card sarebbe troppo compresso
-// per essere leggibile sotto quella soglia — 7 solo sugli schermi davvero
-// larghi.
-const DESKTOP_GRID = "grid grid-cols-4 gap-4 2xl:grid-cols-7";
+// Sempre 7 colonne vere (mai un numero di colonne che non divide 7, es. 4):
+// un "a capo" a metà settimana spezzerebbe l'intestazione del giorno dal
+// resto delle righe pasto, che vanno a capo separatamente (ogni riga è una
+// griglia CSS indipendente) — il giorno finirebbe con l'intestazione subito
+// sotto il giorno precedente ma i suoi piatti molto più in basso, dopo
+// un'intera riga di piatti di altri giorni: sembra un bug anche se i dati
+// ci sono. Ogni colonna ha una larghezza minima leggibile; se lo schermo è
+// più stretto della somma delle 7, il contenitore scorre in orizzontale
+// invece di ridurre il numero di colonne.
+const DESKTOP_GRID = "grid grid-cols-[repeat(7,minmax(11rem,1fr))] gap-4";
 
 export function WeeklyMenuView({
   meals,
@@ -85,11 +89,13 @@ export function WeeklyMenuView({
       </div>
 
       {/* Vista desktop: una vera griglia (riga = pasto, colonna = giorno),
-          non più colonne indipendenti impilate: così le card di una stessa
-          riga (tutte le colazioni, tutti i pranzi, tutte le cene) hanno
-          automaticamente la stessa altezza, dettata da CSS Grid — non serve
-          calcolarla a mano. */}
-      <div className="hidden lg:block">
+          tutta dentro un UNICO contenitore che scorre in orizzontale: così
+          intestazioni e righe pasto restano sempre allineate tra loro,
+          qualunque sia la larghezza dello schermo (mai un "a capo" separato
+          riga per riga che le disallinea). Le card di una stessa riga
+          (tutte le colazioni, tutti i pranzi, tutte le cene) hanno anche
+          automaticamente la stessa altezza, dettata da CSS Grid. */}
+      <div className="hidden overflow-x-auto lg:block">
         <div className={DESKTOP_GRID}>
           {days.map(({ day, date }) => {
             const isToday = date === todayISO;

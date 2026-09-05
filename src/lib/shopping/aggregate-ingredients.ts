@@ -19,9 +19,9 @@ export interface AggregatedIngredientLine {
   needsReviewReason: string | null;
 }
 
-type UnitFamily = "peso" | "volume" | "pezzo" | "cucchiaio" | "cucchiaino" | "qb";
+export type UnitFamily = "peso" | "volume" | "pezzo" | "cucchiaio" | "cucchiaino" | "qb";
 
-function unitFamily(unit: IngredientUnit | null): UnitFamily {
+export function unitFamily(unit: IngredientUnit | null): UnitFamily {
   switch (unit) {
     case "g":
     case "kg":
@@ -42,7 +42,7 @@ function unitFamily(unit: IngredientUnit | null): UnitFamily {
 }
 
 /** Converte una quantità nella unità "base" della sua famiglia (g per il peso, ml per il volume). */
-function toBaseQuantity(quantity: number, unit: IngredientUnit): number {
+export function toBaseQuantity(quantity: number, unit: IngredientUnit): number {
   if (unit === "kg") return quantity * 1000;
   if (unit === "l") return quantity * 1000;
   return quantity;
@@ -54,7 +54,7 @@ function round(value: number, decimals: number): number {
 }
 
 /** Riconverte una quantità "base" nell'unità più leggibile per la famiglia. */
-function fromBaseQuantity(family: UnitFamily, baseQuantity: number): { quantity: number | null; unit: IngredientUnit | null } {
+export function fromBaseQuantity(family: UnitFamily, baseQuantity: number): { quantity: number | null; unit: IngredientUnit | null } {
   switch (family) {
     case "peso":
       return baseQuantity >= 1000
@@ -166,4 +166,46 @@ export function aggregateIngredientLines(lines: IngredientLine[]): AggregatedIng
   }
 
   return result.sort((a, b) => a.name.localeCompare(b.name, "it"));
+}
+
+/**
+ * Somma la quantità di un articolo già in lista con quella di un nuovo
+ * inserimento manuale dello STESSO prodotto (stesso `normalizedName`),
+ * invece di creare una seconda riga duplicata (§12: la lista non deve mai
+ * avere due voci per lo stesso prodotto). Stessa regola prudente
+ * dell'aggregazione dal menu: somma solo se le due quantità sono nella
+ * stessa famiglia di unità di misura, altrimenti segnala "da verificare"
+ * invece di tentare una conversione incerta.
+ */
+export function mergeQuantities(
+  existing: { quantity: number | null; unit: IngredientUnit | null },
+  addQuantity: number | null,
+  addUnit: IngredientUnit | null,
+): { quantity: number | null; unit: IngredientUnit | null; needsReviewReason: string | null } {
+  if (existing.quantity === null || addQuantity === null) {
+    const bothMissing = existing.quantity === null && addQuantity === null;
+    return {
+      quantity: existing.quantity,
+      unit: existing.unit,
+      needsReviewReason: bothMissing ? null : "Aggiunto di nuovo senza quantità precisa: verifica il totale.",
+    };
+  }
+
+  const existingFamily = unitFamily(existing.unit);
+  const addFamily = unitFamily(addUnit);
+  if (existingFamily !== addFamily) {
+    return {
+      quantity: existing.quantity,
+      unit: existing.unit,
+      needsReviewReason: "Aggiunto di nuovo con un'unità di misura diversa: verifica il totale.",
+    };
+  }
+  if (existingFamily === "qb") {
+    return { quantity: null, unit: "q.b.", needsReviewReason: null };
+  }
+
+  const totalBase =
+    toBaseQuantity(existing.quantity, existing.unit as IngredientUnit) + toBaseQuantity(addQuantity, addUnit as IngredientUnit);
+  const { quantity, unit } = fromBaseQuantity(existingFamily, totalBase);
+  return { quantity, unit, needsReviewReason: null };
 }

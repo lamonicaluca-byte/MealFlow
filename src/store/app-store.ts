@@ -35,6 +35,8 @@ import { getMenuGenerationService } from "@/lib/services/menu-generation";
 import type { HouseholdContext, MealAlternative, RecipeFeedbackNote } from "@/lib/services/menu-generation/types";
 import { applyMealUpdate, type ApplyMealUpdateResult } from "@/lib/menu/versioning";
 import { reconcileShoppingListWithMeals } from "@/lib/shopping/reconcile-shopping-list";
+import { mergeQuantities } from "@/lib/shopping/aggregate-ingredients";
+import { normalizeIngredientName } from "@/lib/shopping/normalize-ingredient";
 import { canApproveMenu as canApproveMenuRole } from "@/lib/auth/permissions";
 import { getRealtimeBus } from "@/lib/realtime/demo-bus";
 import { isSupabaseConfigured } from "@/lib/supabase/is-configured";
@@ -1088,11 +1090,39 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
   addManualShoppingItem(listId, draft, actorId) {
     const state = get();
     const now = new Date().toISOString();
+    const normalizedName = normalizeIngredientName(draft.name);
+    const actorName = state.users.find((u) => u.id === actorId)?.displayName ?? "Un familiare";
+
+    // Stesso prodotto già in lista (aggiunto manualmente in precedenza, o
+    // già richiesto dal menu): si aggiorna quella riga invece di crearne una
+    // seconda identica — la lista non deve mai avere due voci per lo stesso
+    // prodotto (§12).
+    const existing = state.shoppingListItems.find(
+      (i) => i.shoppingListId === listId && i.normalizedName === normalizedName,
+    );
+    if (existing) {
+      const merged = mergeQuantities(existing, draft.quantity, draft.unit);
+      const nextStatus = existing.status === "comprato" ? "da_comprare" : existing.status;
+      set({
+        shoppingListItems: state.shoppingListItems.map((i) =>
+          i.id === existing.id ? { ...i, ...merged, status: nextStatus, updatedAt: now } : i,
+        ),
+      });
+      syncSupabase((supabase) =>
+        supabase
+          .from("shopping_list_items")
+          .update({ quantity: merged.quantity, unit: merged.unit, needs_review_reason: merged.needsReviewReason, status: nextStatus })
+          .eq("id", existing.id),
+      );
+      saveToStorage(get());
+      return;
+    }
+
     const item: ShoppingListItem = {
       id: generateId("itm"),
       shoppingListId: listId,
       name: draft.name,
-      normalizedName: draft.name.toLowerCase().trim(),
+      normalizedName,
       quantity: draft.quantity,
       unit: draft.unit,
       category: draft.category,
@@ -1109,7 +1139,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     getRealtimeBus().publish({
       type: "shopping_item_added",
       householdId: state.household!.id,
-      actorName: state.users.find((u) => u.id === actorId)?.displayName ?? "Un familiare",
+      actorName,
       message: `È stato aggiunto "${draft.name}" alla lista della spesa.`,
       payload: { itemId: item.id },
       createdAt: now,
