@@ -119,10 +119,13 @@ export function WeeklyMenuView({
                 // il pranzo nei giorni feriali): una cella "vuota" esplicita,
                 // non semplicemente bianca, per mantenere l'allineamento
                 // della riga senza sembrare un contenuto mancante per errore.
+                // self-start: non si allunga per riempire l'altezza della
+                // riga (che resta quella della card più alta, es. il pranzo
+                // del weekend) — resta compatta, non ha bisogno di più spazio.
                 return (
                   <div
                     key={`${date}-${slot}`}
-                    className="flex items-center justify-center rounded-lg border border-dashed border-border p-3 text-center text-[11px] text-muted-foreground"
+                    className="flex h-fit items-center justify-center self-start rounded-lg border border-dashed border-border p-3 text-center text-[11px] text-muted-foreground"
                   >
                     {MEAL_SLOT_LABELS[slot]}: nessuno
                   </div>

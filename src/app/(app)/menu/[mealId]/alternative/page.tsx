@@ -3,11 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, RefreshCw } from "lucide-react";
+import { ArrowLeft, Clock } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { cn } from "@/lib/utils";
 import type { MealChangeReason } from "@/types/domain";
 import type { MealAlternative } from "@/lib/services/menu-generation/types";
 import { Button } from "@/components/ui/button";
@@ -34,14 +33,12 @@ export default function MealAlternativesPage() {
   const meals = useAppStore((s) => s.meals);
   const getMealAlternatives = useAppStore((s) => s.getMealAlternatives);
   const replaceMeal = useAppStore((s) => s.replaceMeal);
-  const regenerateMeal = useAppStore((s) => s.regenerateMeal);
   const { user } = useCurrentUser();
 
   const meal = meals.find((m) => m.id === params.mealId);
   const [reason, setReason] = React.useState<MealChangeReason | undefined>(undefined);
   const [alternatives, setAlternatives] = React.useState<MealAlternative[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [regenerating, setRegenerating] = React.useState(false);
 
   const load = React.useCallback(
     async (currentReason?: MealChangeReason) => {
@@ -60,15 +57,6 @@ export default function MealAlternativesPage() {
 
   if (!meal) return notFound();
 
-  async function handleRegenerate() {
-    if (!user || !meal) return;
-    setRegenerating(true);
-    await regenerateMeal(meal.id, user.id, user.displayName);
-    setRegenerating(false);
-    toast({ title: "Piatto rigenerato", description: "Un nuovo piatto è stato proposto per questo pasto." });
-    router.push(`/menu/${meal.id}`);
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Link href={`/menu/${meal.id}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
@@ -82,34 +70,27 @@ export default function MealAlternativesPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="max-w-xs flex-1 space-y-1.5">
-          <Label>Perché vuoi cambiarlo? (facoltativo)</Label>
-          <Select
-            value={reason}
-            onValueChange={(v) => {
-              const next = v as MealChangeReason;
-              setReason(next);
-              void load(next);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleziona un motivo" />
-            </SelectTrigger>
-            <SelectContent>
-              {REASON_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button variant="outline" size="sm" disabled={regenerating} onClick={() => void handleRegenerate()}>
-          <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", regenerating && "animate-spin")} />
-          {regenerating ? "Rigenerazione…" : "Rigenera"}
-        </Button>
+      <div className="max-w-xs space-y-1.5">
+        <Label>Perché vuoi cambiarlo? (facoltativo)</Label>
+        <Select
+          value={reason}
+          onValueChange={(v) => {
+            const next = v as MealChangeReason;
+            setReason(next);
+            void load(next);
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Seleziona un motivo" />
+          </SelectTrigger>
+          <SelectContent>
+            {REASON_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
@@ -121,7 +102,12 @@ export default function MealAlternativesPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {alternatives.map((alt) => (
-            <Card key={`${alt.kind}-${alt.recipe.id}`}>
+            // flex + h-full: dentro una griglia CSS le card si allungano già
+            // per pareggiare l'altezza della più alta della riga, ma senza
+            // flex-col il contenuto resta ancorato in alto lasciando lo
+            // spazio in più in fondo — così invece "Scegli questo piatto"
+            // resta sempre allineato allo stesso bordo inferiore.
+            <Card key={`${alt.kind}-${alt.recipe.id}`} className="flex h-full flex-col">
               <CardHeader className="pb-2">
                 <Badge variant="maiolica" className="mb-1.5 w-fit">
                   {alt.label}
@@ -130,7 +116,7 @@ export default function MealAlternativesPage() {
                   {alt.recipe.imageEmoji} {alt.recipe.name}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <CardContent className="flex-1 space-y-2 text-sm text-muted-foreground">
                 <p>{alt.recipe.description}</p>
                 <div className="flex gap-3 text-xs">
                   <span className="flex items-center gap-1">
