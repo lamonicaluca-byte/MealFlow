@@ -2,22 +2,14 @@
 
 import * as React from "react";
 
-import type { MealFeedbackTag } from "@/types/domain";
+import { MEAL_FEEDBACK_TAG_LABELS, type MealFeedbackTag } from "@/types/domain";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-const FEEDBACK_OPTIONS: Array<{ value: MealFeedbackTag; label: string }> = [
-  { value: "piaciuto_a_tutti", label: "Piaciuto a tutti" },
-  { value: "piaciuto_agli_adulti", label: "Piaciuto agli adulti" },
-  { value: "piaciuto_alla_bambina", label: "Piaciuto ad Amelia" },
-  { value: "da_riproporre", label: "Da riproporre" },
-  { value: "da_non_riproporre", label: "Da non riproporre" },
-  { value: "quantita_eccessiva", label: "Quantità eccessiva" },
-  { value: "quantita_insufficiente", label: "Quantità insufficiente" },
-  { value: "preparazione_troppo_lunga", label: "Preparazione troppo lunga" },
-  { value: "sono_rimasti_avanzi", label: "Sono rimasti avanzi" },
-];
+const FEEDBACK_OPTIONS: Array<{ value: MealFeedbackTag; label: string }> = Object.entries(
+  MEAL_FEEDBACK_TAG_LABELS,
+).map(([value, label]) => ({ value: value as MealFeedbackTag, label }));
 
 /**
  * Feedback pasto (§15): solo tag descrittivi selezionabili liberamente,

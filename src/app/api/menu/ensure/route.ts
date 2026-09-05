@@ -4,7 +4,7 @@ import { addWeeks, format, startOfWeek } from "date-fns";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/is-configured";
 import { getMenuGenerationService } from "@/lib/services/menu-generation";
-import type { HouseholdContext } from "@/lib/services/menu-generation/types";
+import type { HouseholdContext, RecipeFeedbackNote } from "@/lib/services/menu-generation/types";
 import type { GeneratedWeek } from "@/lib/validation/menu-schema";
 import { mapDietaryProfile, mapHousehold, mapMember, mapPreferences } from "@/lib/data/mappers";
 
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ menuId: existing.id, created: false });
   }
 
-  const [{ data: householdRow }, { data: memberRows }, { data: profileRows }, { data: preferencesRow }] =
+  const [{ data: householdRow }, { data: memberRows }, { data: profileRows }, { data: preferencesRow }, { data: feedbackRows }] =
     await Promise.all([
       service.from("households").select("*").eq("id", householdId).single(),
       service.from("household_members").select("*").eq("household_id", householdId).is("deleted_at", null),
@@ -66,6 +66,14 @@ export async function POST(request: Request) {
         .select("*, allergies(*), intolerances(*), dietary_restrictions(*), dislikes(*)")
         .eq("household_id", householdId),
       service.from("preferences").select("*").eq("household_id", householdId).maybeSingle(),
+      // Feedback recente (§15): usato per non riproporre piatti segnati "da
+      // non riproporre", sia dal provider mock che dal prompt AI reale.
+      service
+        .from("meal_feedback")
+        .select("tags, note, created_at, meals(recipe_snapshot), users(display_name)")
+        .eq("household_id", householdId)
+        .order("created_at", { ascending: false })
+        .limit(100),
     ]);
 
   if (!householdRow || !memberRows) {
@@ -89,9 +97,10 @@ export async function POST(request: Request) {
           favoriteBreakfasts: [],
           updatedAt: new Date().toISOString(),
         },
+    recentFeedback: mapFeedbackRows(feedbackRows ?? []),
   };
 
-  const menuService = getMenuGenerationService();
+  const menuService = await getMenuGenerationService();
   const result = await menuService.generateWeeklyMenu({ context, weekStartDate });
   if (!result.ok) {
     return NextResponse.json({ error: result.error.message, issues: result.error.issues }, { status: 422 });
@@ -154,4 +163,36 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ menuId: menuRow.id, created: true });
+}
+
+/**
+ * Riga grezza di `meal_feedback` con le risorse annidate (`meals`, `users`)
+ * incluse dalla select PostgREST: senza tipi generati dalla CLI, il client
+ * Supabase non sa distinguere una relazione to-one da una to-many, quindi
+ * resta `any` (stesso confine deliberato documentato in `mappers.ts`).
+ */
+type FeedbackRow = Record<string, any>;
+
+/** Normalizza una risorsa annidata PostgREST, che a seconda dei tipi generati può arrivare come oggetto singolo o array di un elemento. */
+function firstOrSelf<T>(value: T | T[] | null | undefined): T | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value ?? undefined;
+}
+
+function mapFeedbackRows(rows: FeedbackRow[]): RecipeFeedbackNote[] {
+  const notes: RecipeFeedbackNote[] = [];
+  for (const row of rows) {
+    const meal = firstOrSelf(row.meals);
+    const recipeName = meal?.recipe_snapshot?.name;
+    if (!recipeName) continue;
+    const user = firstOrSelf(row.users);
+    notes.push({
+      recipeName,
+      tags: row.tags ?? [],
+      note: row.note,
+      submittedByName: user?.display_name ?? null,
+      createdAt: row.created_at,
+    });
+  }
+  return notes;
 }

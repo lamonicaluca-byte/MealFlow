@@ -77,15 +77,49 @@ ANTHROPIC_API_KEY=...
 ```
 
 Applica poi le migrazioni in `supabase/migrations/` (istruzioni in
-`supabase/README.md`). Il codice è predisposto con un pattern
-provider/adapter (`RealMenuGenerationAdapter`) e client Supabase separati per
-browser/server (`src/lib/supabase/`), ma **il collegamento end-to-end ai
-repository Supabase per le entità applicative (menu, spesa…) non è
-stato implementato in questa consegna**: oggi solo `MenuGenerationService` ha
-un adapter reale predisposto (con fallback automatico al mock in caso di
-errore). Collegare le altre entità significa scrivere un repository
-`SupabaseXxxRepository` accanto a ciascun modulo in `src/lib/data` che oggi
-legge/scrive lo store demo, mantenendo la stessa interfaccia.
+`supabase/README.md`).
+
+### Generazione del menu con l'AI (Claude)
+
+Quando `MEALFLOW_AI_PROVIDER=anthropic` e `ANTHROPIC_API_KEY` sono valorizzate,
+`RealMenuGenerationAdapter` (`src/lib/services/menu-generation/real-adapter.ts`)
+sostituisce il `MockMenuProvider`: chiama Claude forzando l'uso di un tool con
+`input_schema` generato dallo stesso schema Zod usato per la validazione
+(`src/lib/validation/menu-schema.ts`, convertito con `zod-to-json-schema`),
+così l'output è sempre JSON strutturato, mai testo libero da interpretare.
+Qualunque errore (rete, output non conforme) fa fallback silenzioso al
+provider mock, senza mai bloccare l'utente. Le regole di sicurezza
+(allergie, intolleranze, esclusioni) restano **sempre** verificate anche
+dopo con `validateGeneratedWeek`: non sono mai delegate al solo modello,
+nemmeno quando il prompt le richiede esplicitamente.
+
+Le stesse regole della famiglia (allergie, preferenze, impostazioni,
+almeno 2 cene di pesce a settimana) sono tradotte in testo nel prompt
+(`src/lib/services/menu-generation/prompts.ts`) sia per il provider AI reale
+sia — come regole applicate in codice — per il provider mock: i due
+provider seguono le stesse regole, cambia solo il "motore" che sceglie le
+ricette.
+
+**Apprendimento dal feedback (§15).** Quando lasci un feedback su un pasto
+segnato "Da non riproporre", quel piatto viene automaticamente escluso dalle
+generazioni successive — sia dal provider mock (regola di codice) sia dal
+provider AI reale (elencato esplicitamente nel prompt, con chi l'ha
+segnalato e l'eventuale nota). È una regola a livello di piatto per tutta la
+famiglia, non per singolo membro: il modello dati odierno non registra "per
+chi" vale il dislike, solo il pasto e chi ha lasciato il feedback.
+
+L'adapter reale è collegato solo a `generateWeeklyMenu` (la generazione
+settimanale, chiamata da `/api/menu/ensure`), `regenerateMeal`,
+`generateMealAlternatives` ed `explainMenuChoice`. `regenerateDay` e
+`generateShoppingList` restano sul mock perché non sono collegati a nessuna
+azione dell'interfaccia (la lista della spesa è sempre ricalcolata
+deterministicamente dagli ingredienti dei pasti, mai generata dall'AI).
+
+Il codice è anche predisposto con client Supabase separati per browser/server
+(`src/lib/supabase/`) e con repository per tutte le entità applicative (menu,
+spesa, note, inviti…) in `src/lib/data`, entrambi collegati allo store
+Zustand (`src/store/app-store.ts`): vedi la sezione successiva per lo stato
+esatto del collegamento a Supabase in produzione.
 
 ### Stato del collegamento a Supabase (produzione)
 
@@ -286,6 +320,11 @@ documentata qui invece che chiesta a voce:
     "Già in casa" resta comunque disponibile come stato *manuale* di un
     articolo nella lista della spesa (§12): a sparire è solo il calcolo
     automatico basato sul confronto con una dispensa dedicata.
+16. **Generazione del menu con Claude, con apprendimento dal feedback.**
+    `RealMenuGenerationAdapter` collega la generazione a un vero modello AI
+    (vedi sezione dedicata sopra); i piatti segnati "Da non riproporre" in un
+    feedback vengono esclusi dalle settimane successive, sia dal provider
+    mock sia da quello AI reale.
 
 ## Accessibilità e sicurezza — punti salienti
 

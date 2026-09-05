@@ -94,3 +94,30 @@ export type GeneratedIngredient = z.infer<typeof GeneratedIngredientSchema>;
 export type GeneratedRecipe = z.infer<typeof GeneratedRecipeSchema>;
 export type GeneratedMeal = z.infer<typeof GeneratedMealSchema>;
 export type GeneratedWeek = z.infer<typeof GeneratedWeekSchema>;
+
+/**
+ * Deve restare sincronizzato con `AlternativeKind` in
+ * `src/lib/services/menu-generation/types.ts` (le stesse 7 etichette):
+ * qui serve come contratto JSON per il tool-use del provider AI reale.
+ */
+export const AlternativeKindSchema = z.enum([
+  "simile",
+  "piu_veloce",
+  "diversa_compatibile",
+  "vegetariana",
+  "piu_economica",
+  "sotto_20_minuti",
+  "preparazione_anticipata",
+]);
+
+export const GeneratedAlternativeSchema = z.object({
+  kind: AlternativeKindSchema,
+  label: z.string().min(1),
+  recipe: GeneratedRecipeSchema,
+});
+
+export const GeneratedAlternativesSchema = z.object({
+  alternatives: z.array(GeneratedAlternativeSchema).min(1).max(7),
+});
+
+export type GeneratedAlternative = z.infer<typeof GeneratedAlternativeSchema>;

@@ -171,7 +171,7 @@ function buildShoppingListFromMeals(
  * calcolare le proprie priorità in base al giorno reale (§17).
  */
 export async function buildDemoState(): Promise<AppState> {
-  const service = getMenuGenerationService();
+  const service = await getMenuGenerationService();
   const context = buildHouseholdContext();
 
   const today = new Date();

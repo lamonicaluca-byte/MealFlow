@@ -27,7 +27,7 @@ import { generateId } from "@/lib/utils";
 import { buildDemoState } from "@/lib/data/build-demo-state";
 import { buildProductionState } from "@/lib/data/build-production-state";
 import { getMenuGenerationService } from "@/lib/services/menu-generation";
-import type { HouseholdContext, MealAlternative } from "@/lib/services/menu-generation/types";
+import type { HouseholdContext, MealAlternative, RecipeFeedbackNote } from "@/lib/services/menu-generation/types";
 import { applyMealUpdate, type ApplyMealUpdateResult } from "@/lib/menu/versioning";
 import { reconcileShoppingListWithMeals } from "@/lib/shopping/reconcile-shopping-list";
 import { canApproveMenu as canApproveMenuRole } from "@/lib/auth/permissions";
@@ -117,7 +117,31 @@ function buildContext(state: AppState): HouseholdContext {
     members: state.members,
     dietaryProfiles: state.dietaryProfiles,
     preferences: state.preferences!,
+    recentFeedback: buildRecentFeedback(state),
   };
+}
+
+/**
+ * Traduce il feedback pasto grezzo (§15) nel formato testuale che il
+ * `MenuGenerationService` usa per non riproporre piatti segnati "da non
+ * riproporre" (sia nel provider mock che nel prompt del provider AI reale).
+ */
+function buildRecentFeedback(state: AppState): RecipeFeedbackNote[] {
+  const mealById = new Map(state.meals.map((m) => [m.id, m]));
+  const nameByUserId = new Map(state.users.map((u) => [u.id, u.displayName]));
+  const notes: RecipeFeedbackNote[] = [];
+  for (const feedback of state.mealFeedback) {
+    const recipeName = mealById.get(feedback.mealId)?.recipeSnapshot?.name;
+    if (!recipeName) continue;
+    notes.push({
+      recipeName,
+      tags: feedback.tags,
+      note: feedback.note,
+      submittedByName: nameByUserId.get(feedback.createdBy) ?? null,
+      createdAt: feedback.createdAt,
+    });
+  }
+  return notes;
 }
 
 function saveToStorage(state: AppState) {
@@ -760,7 +784,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     const state = get();
     const meal = state.meals.find((m) => m.id === mealId);
     if (!meal) return;
-    const service = getMenuGenerationService();
+    const service = await getMenuGenerationService();
     const result = await service.regenerateMeal({
       context: buildContext(state),
       day: meal.day,
@@ -791,7 +815,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     const state = get();
     const meal = state.meals.find((m) => m.id === mealId);
     if (!meal) return [];
-    const service = getMenuGenerationService();
+    const service = await getMenuGenerationService();
     const result = await service.generateMealAlternatives({
       context: buildContext(state),
       day: meal.day,
@@ -806,7 +830,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     const state = get();
     const meal = state.meals.find((m) => m.id === mealId);
     if (!meal || !meal.recipeSnapshot) return "";
-    const service = getMenuGenerationService();
+    const service = await getMenuGenerationService();
     const result = await service.explainMenuChoice({
       context: buildContext(state),
       meal: {

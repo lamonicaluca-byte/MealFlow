@@ -351,6 +351,19 @@ export type MealFeedbackTag =
   | "preparazione_troppo_lunga"
   | "sono_rimasti_avanzi";
 
+/** Etichetta umana di ciascun tag di feedback (mai "bambina": vedi §3). */
+export const MEAL_FEEDBACK_TAG_LABELS: Record<MealFeedbackTag, string> = {
+  piaciuto_a_tutti: "Piaciuto a tutti",
+  piaciuto_agli_adulti: "Piaciuto agli adulti",
+  piaciuto_alla_bambina: "Piaciuto ad Amelia",
+  da_riproporre: "Da riproporre",
+  da_non_riproporre: "Da non riproporre",
+  quantita_eccessiva: "Quantità eccessiva",
+  quantita_insufficiente: "Quantità insufficiente",
+  preparazione_troppo_lunga: "Preparazione troppo lunga",
+  sono_rimasti_avanzi: "Sono rimasti avanzi",
+};
+
 export type MealChangeReason =
   | "non_piace"
   | "mangiato_recentemente"

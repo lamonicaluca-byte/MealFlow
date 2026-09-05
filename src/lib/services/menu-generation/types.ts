@@ -4,11 +4,27 @@ import type {
   HouseholdMember,
   HouseholdPreferences,
   MealChangeReason,
+  MealFeedbackTag,
   MealSlot,
   Weekday,
 } from "@/types/domain";
 import type { WeekValidationIssue } from "@/lib/validation/validate-generated-week";
 import type { GeneratedMeal, GeneratedRecipe, GeneratedWeek } from "@/lib/validation/menu-schema";
+
+/**
+ * Un feedback recente su un pasto già servito, così com'è arrivato dalla
+ * famiglia (§15): usato per non riproporre piatti segnati esplicitamente
+ * "da non riproporre" (vedi `src/lib/menu/feedback-avoidance.ts`) e, per il
+ * provider AI reale, anche come contesto testuale libero (es. una nota che
+ * spiega perché a un membro non è piaciuto).
+ */
+export interface RecipeFeedbackNote {
+  recipeName: string;
+  tags: MealFeedbackTag[];
+  note: string | null;
+  submittedByName: string | null;
+  createdAt: string;
+}
 
 /** Contesto familiare completo necessario per generare o adattare un menu. */
 export interface HouseholdContext {
@@ -18,6 +34,8 @@ export interface HouseholdContext {
   preferences: HouseholdPreferences;
   /** Nomi delle ricette proposte nelle 2-3 settimane precedenti, per limitare le ripetizioni. */
   recentRecipeNames?: string[];
+  /** Feedback recenti sui pasti della famiglia (§15), più recenti prima. */
+  recentFeedback?: RecipeFeedbackNote[];
 }
 
 export interface GenerateWeeklyMenuInput {

@@ -2,6 +2,7 @@ import { WEEKDAYS, defaultSlotsForDay, type MealSlot, type Recipe, type Weekday 
 import { BREAKFAST_RECIPES, MAIN_RECIPES } from "@/lib/data/demo-recipes";
 import { checkRecipeAgainstAllergies, containsTreeNuts, isTreeNutsAllowed } from "@/lib/validation/allergy-guard";
 import { validateGeneratedWeek } from "@/lib/validation/validate-generated-week";
+import { avoidedRecipeNames } from "@/lib/menu/feedback-avoidance";
 import type { GeneratedMeal, GeneratedRecipe, GeneratedWeek } from "@/lib/validation/menu-schema";
 import { createSeededRandom, pickDeterministic } from "./deterministic-random";
 import type {
@@ -55,10 +56,12 @@ function maxPrepTimeFor(day: Weekday, context: HouseholdContext): number {
     : context.household.settings.maxPrepMinutesWeekday;
 }
 
-/** Ricette esplicitamente sgradite (piatto o singolo ingrediente) dalla famiglia. */
+/** Ricette esplicitamente sgradite (piatto o singolo ingrediente) dalla famiglia, o segnate "da non riproporre" in un feedback. */
 function isDisliked(recipe: Recipe, context: HouseholdContext): boolean {
   const dislikedDishNames = context.preferences.dislikedDishes.map((d) => d.toLowerCase());
   if (dislikedDishNames.includes(recipe.name.toLowerCase())) return true;
+
+  if (avoidedRecipeNames(context.recentFeedback).has(recipe.name.toLowerCase())) return true;
 
   const dislikedIngredients = context.dietaryProfiles.flatMap((p) =>
     p.dislikes.map((d) => d.ingredientOrDish.toLowerCase()),
