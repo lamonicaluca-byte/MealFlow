@@ -79,19 +79,25 @@ ANTHROPIC_API_KEY=...
 Applica poi le migrazioni in `supabase/migrations/` (istruzioni in
 `supabase/README.md`).
 
-### Generazione del menu con l'AI (Claude)
+### Generazione del menu con l'AI (Claude o Google Gemini)
 
-Quando `MEALFLOW_AI_PROVIDER=anthropic` e `ANTHROPIC_API_KEY` sono valorizzate,
-`RealMenuGenerationAdapter` (`src/lib/services/menu-generation/real-adapter.ts`)
-sostituisce il `MockMenuProvider`: chiama Claude forzando l'uso di un tool con
-`input_schema` generato dallo stesso schema Zod usato per la validazione
-(`src/lib/validation/menu-schema.ts`, convertito con `zod-to-json-schema`),
-così l'output è sempre JSON strutturato, mai testo libero da interpretare.
-Qualunque errore (rete, output non conforme) fa fallback silenzioso al
-provider mock, senza mai bloccare l'utente. Le regole di sicurezza
-(allergie, intolleranze, esclusioni) restano **sempre** verificate anche
-dopo con `validateGeneratedWeek`: non sono mai delegate al solo modello,
-nemmeno quando il prompt le richiede esplicitamente.
+Con `MEALFLOW_AI_PROVIDER=anthropic` (+ `ANTHROPIC_API_KEY`, a pagamento in
+base all'uso) o `MEALFLOW_AI_PROVIDER=gemini` (+ `GEMINI_API_KEY`, **gratis**
+grazie al livello gratuito di Google AI Studio, nessuna carta di credito
+richiesta — chiave su https://aistudio.google.com/app/apikey), l'adapter
+reale corrispondente (`real-adapter.ts` per Claude, `gemini-adapter.ts` per
+Gemini) sostituisce il `MockMenuProvider`: chiede al modello un output JSON
+strutturato conforme allo stesso schema Zod usato per la validazione
+(`src/lib/validation/menu-schema.ts`, convertito con `zod-to-json-schema` —
+tool-use per Claude, `responseJsonSchema` per Gemini), mai testo libero da
+interpretare. Qualunque errore (rete, output non conforme) fa fallback
+silenzioso al provider mock, senza mai bloccare l'utente. Le regole di
+sicurezza (allergie, intolleranze, esclusioni) restano **sempre** verificate
+anche dopo con `validateGeneratedWeek`: non sono mai delegate al solo
+modello, nemmeno quando il prompt le richiede esplicitamente. I due adapter
+condividono la stessa interfaccia (`MenuGenerationService`) e gli stessi
+prompt (`prompts.ts`): passare dall'uno all'altro è solo una questione di
+variabili d'ambiente, nessuna modifica al codice.
 
 Le stesse regole della famiglia (allergie, preferenze, impostazioni,
 almeno 1 cena di pesce a settimana) sono tradotte in testo nel prompt
@@ -108,8 +114,8 @@ segnalato e l'eventuale nota). È una regola a livello di piatto per tutta la
 famiglia, non per singolo membro: il modello dati odierno non registra "per
 chi" vale il dislike, solo il pasto e chi ha lasciato il feedback.
 
-L'adapter reale è collegato solo a `generateWeeklyMenu` (la generazione
-settimanale, chiamata da `/api/menu/ensure`), `regenerateMeal`,
+Entrambi gli adapter reali sono collegati solo a `generateWeeklyMenu` (la
+generazione settimanale, chiamata da `/api/menu/ensure`), `regenerateMeal`,
 `generateMealAlternatives` ed `explainMenuChoice`. `regenerateDay` e
 `generateShoppingList` restano sul mock perché non sono collegati a nessuna
 azione dell'interfaccia (la lista della spesa è sempre ricalcolata
@@ -320,11 +326,11 @@ documentata qui invece che chiesta a voce:
     "Già in casa" resta comunque disponibile come stato *manuale* di un
     articolo nella lista della spesa (§12): a sparire è solo il calcolo
     automatico basato sul confronto con una dispensa dedicata.
-16. **Generazione del menu con Claude, con apprendimento dal feedback.**
-    `RealMenuGenerationAdapter` collega la generazione a un vero modello AI
-    (vedi sezione dedicata sopra); i piatti segnati "Da non riproporre" in un
-    feedback vengono esclusi dalle settimane successive, sia dal provider
-    mock sia da quello AI reale.
+16. **Generazione del menu con Claude o Google Gemini, con apprendimento dal
+    feedback.** Due adapter intercambiabili (vedi sezione dedicata sopra)
+    collegano la generazione a un vero modello AI, Gemini gratuitamente; i
+    piatti segnati "Da non riproporre" in un feedback vengono esclusi dalle
+    settimane successive, sia dal provider mock sia da quello AI reale.
 
 ## Accessibilità e sicurezza — punti salienti
 
