@@ -60,16 +60,17 @@ export function WeeklyMenuView({ meals, pendingApprovalHint }: { meals: Meal[]; 
         ))}
       </div>
 
-      {/* Vista desktop: griglia settimanale. Solo 4 colonne fino a "xl"
-          (1280px) — a 7 colonne il contenuto di ogni card sarebbe troppo
-          compresso per essere leggibile — e 7 colonne (l'intera settimana in
-          una riga) solo sugli schermi davvero larghi. */}
-      <div className="hidden lg:grid lg:grid-cols-4 lg:gap-4 xl:grid-cols-7">
+      {/* Vista desktop: griglia settimanale. 4 colonne fino a "2xl" (1536px)
+          — anche su un laptop/monitor "largo" da 1280-1440px, 7 colonne
+          lasciano troppo poco spazio al contenuto di ogni card per essere
+          leggibile — e 7 colonne (l'intera settimana in una riga) solo sugli
+          schermi davvero larghi. */}
+      <div className="hidden lg:grid lg:grid-cols-4 lg:gap-4 2xl:grid-cols-7">
         {days.map(({ day, date, meals: dayMeals }) => {
           const isToday = date === todayISO;
           return (
             <div key={date} className="space-y-3">
-              <div className={cn("rounded-md px-2.5 py-2", isToday ? "bg-crimson-muted" : "bg-secondary/40")}>
+              <div className={cn("rounded-md p-3", isToday ? "bg-crimson-muted" : "bg-secondary/40")}>
                 <h2 className="font-display text-base font-semibold">{WEEKDAY_LABELS[day]}</h2>
                 <span className="mt-0.5 block font-sans text-xs font-normal text-muted-foreground">
                   {formatDateDisplay(date)}

@@ -80,16 +80,22 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
         <div className="min-w-0">
           {/* In versione compatta il giorno è già nell'intestazione della colonna: qui basta lo slot. */}
           <p className="text-eyebrow">{compact ? MEAL_SLOT_LABELS[meal.slot] : `${WEEKDAY_LABELS[meal.day]} · ${MEAL_SLOT_LABELS[meal.slot]}`}</p>
-          <h3
-            title={compact ? recipe.name : undefined}
-            className={cn(
-              "font-display font-semibold",
-              compact ? "line-clamp-2 text-sm leading-snug" : "text-xl leading-snug",
-            )}
-          >
-            <span className={cn("mr-1", compact ? "text-base" : "mr-1.5 text-2xl")}>{recipe.imageEmoji}</span>
-            {recipe.name}
-          </h3>
+          {/* L'emoji è un elemento fratello, non dentro l'h3: se stesse
+              dentro il blocco troncato (line-clamp), in una colonna stretta
+              "ruba" da sola un'intera riga delle 2 disponibili, lasciando
+              quasi nulla per il nome vero del piatto. */}
+          <div className="flex items-start gap-1.5">
+            <span className={cn("shrink-0 leading-none", compact ? "text-base" : "text-2xl")}>{recipe.imageEmoji}</span>
+            <h3
+              title={compact ? recipe.name : undefined}
+              className={cn(
+                "min-w-0 font-display font-semibold",
+                compact ? "line-clamp-2 text-sm leading-snug" : "text-xl leading-snug",
+              )}
+            >
+              {recipe.name}
+            </h3>
+          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
