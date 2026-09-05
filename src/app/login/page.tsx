@@ -79,7 +79,6 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <span className="font-display text-4xl font-semibold tracking-tight">MealFlow</span>
-          <p className="text-eyebrow mt-2">Meno decisioni, più tempo insieme.</p>
         </div>
 
         <Card>
