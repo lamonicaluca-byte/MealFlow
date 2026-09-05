@@ -104,19 +104,34 @@ dalla modalità demo a un backend Supabase reale:
   mutazione atomica lato server (verifica ruolo, aggiorna la versione,
   genera la lista della spesa aggregata) — l'app la attende con `await`
   per evitare che una navigazione la interrompa a metà.
-- **Lista della spesa**: le azioni di stato/quantità/note sugli articoli
-  sincronizzano su Supabase in background dopo l'aggiornamento ottimistico
-  locale (`syncSupabase` in `src/store/app-store.ts`).
+- **Lista della spesa e le altre azioni**: ogni mutazione (spesa, presenze ai
+  pasti, note pasto/famiglia, "fuori casa", pasti manuali, sostituzione e
+  rigenerazione pasto, feedback pasto, inviti membri, preferenze di
+  notifica, profilo alimentare e impostazioni famiglia) aggiorna prima lo
+  stato locale in modo ottimistico e poi sincronizza su Supabase in
+  background (`syncSupabase` in `src/store/app-store.ts`). Quando una
+  modifica a un pasto tocca un menu già approvato, viene creata una nuova
+  versione (mai sovrascrivendo quella approvata) e, se esisteva già una
+  lista della spesa, viene ricollegata e i suoi articoli ricalcolati.
+- **Supabase Realtime**: `subscribeRealtime()` collega la lista della spesa,
+  lo stato del menu e le note famiglia agli aggiornamenti fatti da altri
+  dispositivi (`supabase/migrations/0004_realtime.sql` abilita la
+  pubblicazione realtime sulle tabelle coinvolte, con le stesse RLS già in
+  vigore per le query normali). Un cambiamento fatto da un familiare — es.
+  "Chalika ha segnato le zucchine come comprate" — arriva agli altri
+  dispositivi senza ricaricare la pagina, tramite lo stesso bus di eventi
+  usato per i toast in modalità demo (`src/lib/realtime/demo-bus.ts`).
+- **Keep-alive automatico**: un Vercel Cron Job (`vercel.json`) chiama
+  `/api/cron/keep-alive` ogni giorno per evitare che il progetto Supabase
+  free tier vada in pausa per inattività.
 
-Cosa **non** è ancora collegato (resta solo locale/`localStorage` anche in
-produzione, quindi non sincronizzato tra dispositivi diversi): presenze ai
-pasti, note pasto/famiglia, pasti manuali, sostituzione/rigenerazione pasto,
-inviti membri, preferenze di notifica, feedback pasto, profilo alimentare e
-impostazioni famiglia in onboarding. Nessun keep-alive automatico e nessun
-Supabase Realtime sono ancora presenti: il progetto Supabase free tier può
-mettersi in pausa per inattività, e un cambiamento fatto da un membro della
-famiglia non compare in tempo reale sugli altri dispositivi finché non si
-ricarica la pagina.
+Cosa **non** è ancora collegato: gli inviti restano "un clic" solo nella UI
+(non esiste ancora il flusso che, all'accettazione, crea davvero un nuovo
+utente Supabase Auth); il catalogo `allergies`/`intolerances`/
+`dietary_restrictions`/`dislikes` (tabelle figlie del profilo alimentare)
+non è ancora sincronizzato — solo i campi semplici (note, piatti preferiti,
+apertura a nuovi piatti) lo sono, poiché è l'unico caso già usato
+dall'interfaccia.
 
 ---
 

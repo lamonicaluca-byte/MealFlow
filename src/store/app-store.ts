@@ -28,13 +28,23 @@ import { buildDemoState } from "@/lib/data/build-demo-state";
 import { buildProductionState } from "@/lib/data/build-production-state";
 import { getMenuGenerationService } from "@/lib/services/menu-generation";
 import type { HouseholdContext, MealAlternative } from "@/lib/services/menu-generation/types";
-import { applyMealUpdate } from "@/lib/menu/versioning";
+import { applyMealUpdate, type ApplyMealUpdateResult } from "@/lib/menu/versioning";
 import { reconcileShoppingListWithMeals } from "@/lib/shopping/reconcile-shopping-list";
 import { canApproveMenu as canApproveMenuRole } from "@/lib/auth/permissions";
 import { getRealtimeBus } from "@/lib/realtime/demo-bus";
 import { isSupabaseConfigured } from "@/lib/supabase/is-configured";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { shoppingListItemToRow } from "@/lib/data/mappers";
+import {
+  dietaryProfileToRow,
+  householdSettingsToRow,
+  invitationToRow,
+  mapNote,
+  mapShoppingListItem,
+  mealToRow,
+  notificationPreferencesToRow,
+  preferencesToRow,
+  shoppingListItemToRow,
+} from "@/lib/data/mappers";
 import type { AppState } from "./types";
 
 const STORAGE_KEY = "mealflow-demo-state-v1";
@@ -43,6 +53,13 @@ interface Actions {
   initialize: () => Promise<void>;
   loginAs: (userId: string) => void;
   logout: () => Promise<void>;
+  /**
+   * Attiva Supabase Realtime per ricevere le modifiche fatte da altri
+   * dispositivi/membri della famiglia (lista della spesa, approvazione menu,
+   * note). No-op in modalità demo. Restituisce la funzione di annullamento
+   * sottoscrizione, da chiamare allo smontaggio.
+   */
+  subscribeRealtime: () => () => void;
 
   setOnboardingStep: (step: number) => void;
   completeOnboarding: () => void;
@@ -147,6 +164,83 @@ function syncSupabase(
   });
 }
 
+/**
+ * Sincronizza su Supabase il risultato di `applyMealUpdate`, usato da tutte
+ * le mutazioni sui pasti (presenze, note, "fuori casa", sostituzione,
+ * rigenerazione). Se il menu era già approvato, `applyMealUpdate` non
+ * sovrascrive la versione approvata ma ne crea una nuova (§11): qui la
+ * persistiamo insieme a tutti i suoi pasti, e se esisteva già una lista
+ * della spesa per la versione precedente la ricolleghiamo alla nuova,
+ * sincronizzando anche gli articoli ricalcolati dalla riconciliazione
+ * (inseriti, aggiornati o non più necessari).
+ */
+function syncMealUpdateResult(
+  result: ApplyMealUpdateResult,
+  updatedMealId: string,
+  previousListId: string | null,
+  previousListItems: ShoppingListItem[],
+  nextListItems: ShoppingListItem[] | null,
+) {
+  syncSupabase(async (supabase) => {
+    if (!result.versionWasCreated) {
+      const updatedMeal = result.meals.find((m) => m.id === updatedMealId);
+      if (!updatedMeal) return;
+      return supabase.from("meals").update(mealToRow(updatedMeal)).eq("id", updatedMealId);
+    }
+
+    const versionInsert = await supabase.from("menu_versions").insert({
+      id: result.version.id,
+      menu_id: result.version.menuId,
+      version_number: result.version.versionNumber,
+      previous_version_id: result.version.previousVersionId,
+      change_reason: result.version.changeReason,
+      created_by: result.version.createdBy,
+      is_immutable: false,
+    });
+    if (versionInsert.error) return versionInsert;
+
+    const mealsInsert = await supabase
+      .from("meals")
+      .insert(result.meals.map((m) => ({ id: m.id, ...mealToRow(m) })));
+    if (mealsInsert.error) return mealsInsert;
+
+    const menuUpdate = await supabase
+      .from("weekly_menus")
+      .update({ current_version_id: result.version.id, status: result.menu.status, updated_at: result.menu.updatedAt })
+      .eq("id", result.menu.id);
+    if (menuUpdate.error) return menuUpdate;
+
+    if (!previousListId || !nextListItems) return;
+
+    const listUpdate = await supabase
+      .from("shopping_lists")
+      .update({ menu_version_id: result.version.id, updated_at: result.menu.updatedAt })
+      .eq("id", previousListId);
+    if (listUpdate.error) return listUpdate;
+
+    const nextIds = new Set(nextListItems.map((i) => i.id));
+    const prevIds = new Set(previousListItems.map((i) => i.id));
+    const toDelete = previousListItems.filter((i) => !nextIds.has(i.id)).map((i) => i.id);
+    const toInsert = nextListItems.filter((i) => !prevIds.has(i.id));
+    const toUpdate = nextListItems.filter((i) => prevIds.has(i.id));
+
+    if (toDelete.length) {
+      const del = await supabase.from("shopping_list_items").delete().in("id", toDelete);
+      if (del.error) return del;
+    }
+    if (toInsert.length) {
+      const ins = await supabase
+        .from("shopping_list_items")
+        .insert(toInsert.map((i) => ({ id: i.id, ...shoppingListItemToRow(i) })));
+      if (ins.error) return ins;
+    }
+    for (const item of toUpdate) {
+      const upd = await supabase.from("shopping_list_items").update(shoppingListItemToRow(item)).eq("id", item.id);
+      if (upd.error) return upd;
+    }
+  });
+}
+
 const initialState: AppState = {
   status: "idle",
   currentUserId: null,
@@ -225,6 +319,98 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     saveToStorage(get());
   },
 
+  subscribeRealtime() {
+    if (!isSupabaseConfigured()) return () => {};
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) return () => {};
+
+    const channel = supabase
+      .channel("mealflow-household-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shopping_list_items" },
+        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          const state = get();
+          if (payload.eventType === "DELETE") {
+            const oldId = payload.old.id as string;
+            if (!state.shoppingListItems.some((i) => i.id === oldId)) return;
+            set({ shoppingListItems: state.shoppingListItems.filter((i) => i.id !== oldId) });
+            return;
+          }
+          const row = mapShoppingListItem(payload.new);
+          const exists = state.shoppingListItems.some((i) => i.id === row.id);
+          set({
+            shoppingListItems: exists
+              ? state.shoppingListItems.map((i) => (i.id === row.id ? row : i))
+              : [...state.shoppingListItems, row],
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "shopping_item_status_history" },
+        (payload: { new: Record<string, any> }) => {
+          const row = payload.new;
+          const state = get();
+          if (row.changed_by === state.currentUserId) return; // non notificare le proprie azioni
+          const item = state.shoppingListItems.find((i) => i.id === row.item_id);
+          getRealtimeBus().publish({
+            type: "shopping_item_updated",
+            householdId: state.household?.id ?? "",
+            actorName: row.changed_by_name,
+            message: `${row.changed_by_name} ha segnato "${item?.name ?? "un articolo"}" come ${String(row.new_status).replace(/_/g, " ")}.`,
+            payload: { itemId: row.item_id },
+            createdAt: row.changed_at,
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "weekly_menus" },
+        (payload: { new: Record<string, any> }) => {
+          const row = payload.new;
+          const state = get();
+          if (row.status !== "approved" || !state.currentUserId) return;
+          void buildProductionState(supabase, state.currentUserId).then((fresh) => {
+            set({ ...fresh, status: "ready" });
+          });
+          getRealtimeBus().publish({
+            type: "menu_approved",
+            householdId: row.household_id,
+            actorName: "Un familiare",
+            message: "Il menu è stato approvato su un altro dispositivo.",
+            payload: { menuId: row.id },
+            createdAt: row.updated_at,
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "household_notes" },
+        (payload: { new: Record<string, any> }) => {
+          const row = payload.new;
+          const state = get();
+          if (state.notes.some((n) => n.id === row.id)) return;
+          set({ notes: [mapNote(row), ...state.notes] });
+          if (row.author_id !== state.currentUserId) {
+            getRealtimeBus().publish({
+              type: "note_added",
+              householdId: row.household_id,
+              actorName: row.author_name,
+              message: `${row.author_name} ha aggiunto una nota.`,
+              payload: { noteId: row.id },
+              createdAt: row.created_at,
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  },
+
   setOnboardingStep(step) {
     const state = get();
     if (!state.household) return;
@@ -243,38 +429,66 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
   updateHouseholdName(name) {
     const state = get();
     if (!state.household) return;
-    set({ household: { ...state.household, name, updatedAt: new Date().toISOString() } });
+    const now = new Date().toISOString();
+    const householdId = state.household.id;
+    set({ household: { ...state.household, name, updatedAt: now } });
+    syncSupabase((supabase) => supabase.from("households").update({ name, updated_at: now }).eq("id", householdId));
     saveToStorage(get());
   },
 
   updateHouseholdSettings(patch) {
     const state = get();
     if (!state.household) return;
+    const now = new Date().toISOString();
+    const householdId = state.household.id;
     set({
       household: {
         ...state.household,
         settings: { ...state.household.settings, ...patch },
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       },
     });
+    syncSupabase((supabase) =>
+      supabase
+        .from("households")
+        .update({ ...householdSettingsToRow(patch), updated_at: now })
+        .eq("id", householdId),
+    );
     saveToStorage(get());
   },
 
   updateDietaryProfile(memberId, patch) {
     const state = get();
     const now = new Date().toISOString();
+    const profile = state.dietaryProfiles.find((p) => p.memberId === memberId);
     set({
       dietaryProfiles: state.dietaryProfiles.map((p) =>
         p.memberId === memberId ? { ...p, ...patch, updatedAt: now } : p,
       ),
     });
+    if (profile) {
+      syncSupabase((supabase) =>
+        supabase
+          .from("dietary_profiles")
+          .update({ ...dietaryProfileToRow(patch), updated_at: now })
+          .eq("id", profile.id),
+      );
+    }
     saveToStorage(get());
   },
 
   updatePreferences(patch) {
     const state = get();
     if (!state.preferences) return;
-    set({ preferences: { ...state.preferences, ...patch, updatedAt: new Date().toISOString() } });
+    const now = new Date().toISOString();
+    const preferencesId = state.preferences.id;
+    set({ preferences: { ...state.preferences, ...patch, updatedAt: now } });
+    syncSupabase((supabase) =>
+      supabase
+        .from("preferences")
+        .update({ ...preferencesToRow(patch), updated_at: now })
+        .eq("id", preferencesId),
+    );
     saveToStorage(get());
   },
 
@@ -296,6 +510,9 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
       acceptedAt: null,
     };
     set({ invitations: [invitation, ...state.invitations] });
+    syncSupabase((supabase) =>
+      supabase.from("invitations").insert({ id: invitation.id, ...invitationToRow(invitation) }),
+    );
     saveToStorage(get());
   },
 
@@ -304,6 +521,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     set({
       invitations: state.invitations.map((i) => (i.id === invitationId ? { ...i, status: "revoked" } : i)),
     });
+    syncSupabase((supabase) => supabase.from("invitations").update({ status: "revoked" }).eq("id", invitationId));
     saveToStorage(get());
   },
 
@@ -312,6 +530,9 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     set({
       notificationPreferences: state.notificationPreferences.map((p) => (p.userId === userId ? { ...p, ...patch } : p)),
     });
+    syncSupabase((supabase) =>
+      supabase.from("notification_preferences").update(notificationPreferencesToRow(patch)).eq("user_id", userId),
+    );
     saveToStorage(get());
   },
 
@@ -473,6 +694,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
       updatedBy: actorId,
     };
     set({ meals: [...state.meals, newMeal] });
+    syncSupabase((supabase) => supabase.from("meals").insert({ id: newMeal.id, ...mealToRow(newMeal) }));
     get().pushActivity(`È stato aggiunto un pasto manuale: ${dishName}.`);
     saveToStorage(get());
   },
@@ -483,6 +705,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     if (!meal || !meal.isManuallyAdded) return;
     void actorId;
     set({ meals: state.meals.filter((m) => m.id !== mealId) });
+    syncSupabase((supabase) => supabase.from("meals").delete().eq("id", mealId));
     saveToStorage(get());
   },
 
@@ -614,6 +837,16 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
       createdAt: new Date().toISOString(),
     };
     set({ mealFeedback: [feedback, ...state.mealFeedback] });
+    syncSupabase((supabase) =>
+      supabase.from("meal_feedback").insert({
+        id: feedback.id,
+        meal_id: feedback.mealId,
+        household_id: feedback.householdId,
+        created_by: feedback.createdBy,
+        tags: feedback.tags,
+        note: feedback.note,
+      }),
+    );
     saveToStorage(get());
   },
 
@@ -731,6 +964,7 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
     const { itemId, previous } = lastShoppingChange;
     const state = get();
     set({ shoppingListItems: state.shoppingListItems.map((i) => (i.id === itemId ? previous : i)) });
+    syncSupabase((supabase) => supabase.from("shopping_list_items").update({ status: previous.status }).eq("id", itemId));
     lastShoppingChange = null;
     saveToStorage(get());
   },
@@ -749,6 +983,17 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
       createdAt: now,
     };
     set({ notes: [note, ...state.notes] });
+    syncSupabase((supabase) =>
+      supabase.from("household_notes").insert({
+        id: note.id,
+        household_id: note.householdId,
+        scope: note.scope,
+        ref_id: note.refId,
+        author_id: note.authorId,
+        author_name: note.authorName,
+        text: note.text,
+      }),
+    );
     getRealtimeBus().publish({
       type: "note_added",
       householdId: state.household!.id,
@@ -762,19 +1007,27 @@ export const useAppStore = create<AppState & Actions>()((set, get) => ({
 
   markNotificationRead(notificationId) {
     const state = get();
+    const target = state.notifications.find((n) => n.id === notificationId);
     const now = new Date().toISOString();
     set({
       notifications: state.notifications.map((n) => (n.id === notificationId ? { ...n, readAt: n.readAt ?? now } : n)),
     });
+    if (target && !target.readAt) {
+      syncSupabase((supabase) => supabase.from("notifications").update({ read_at: now }).eq("id", notificationId));
+    }
     saveToStorage(get());
   },
 
   markAllNotificationsRead(userId) {
     const state = get();
     const now = new Date().toISOString();
+    const idsToMark = state.notifications.filter((n) => n.userId === userId && !n.readAt).map((n) => n.id);
     set({
       notifications: state.notifications.map((n) => (n.userId === userId && !n.readAt ? { ...n, readAt: now } : n)),
     });
+    if (idsToMark.length) {
+      syncSupabase((supabase) => supabase.from("notifications").update({ read_at: now }).in("id", idsToMark));
+    }
     saveToStorage(get());
   },
 
@@ -823,16 +1076,22 @@ function applyToMeal(
 
   let shoppingLists = state.shoppingLists;
   let shoppingListItems = state.shoppingListItems;
+  let previousListId: string | null = null;
+  let previousListItems: ShoppingListItem[] = [];
+  let nextListItems: ShoppingListItem[] | null = null;
 
   if (result.versionWasCreated) {
     const existingList = state.shoppingLists.find((l) => l.menuVersionId === version.id);
     if (existingList) {
+      previousListId = existingList.id;
+      previousListItems = state.shoppingListItems.filter((i) => i.shoppingListId === existingList.id);
       const reconciled = reconcileShoppingListWithMeals({
         shoppingListId: existingList.id,
-        existingItems: state.shoppingListItems.filter((i) => i.shoppingListId === existingList.id),
+        existingItems: previousListItems,
         meals: result.meals,
         now,
       });
+      nextListItems = reconciled.items;
       shoppingLists = state.shoppingLists.map((l) => (l.id === existingList.id ? { ...l, menuVersionId: version.id, updatedAt: now } : l));
       shoppingListItems = [
         ...state.shoppingListItems.filter((i) => i.shoppingListId !== existingList.id),
@@ -848,5 +1107,6 @@ function applyToMeal(
     shoppingLists,
     shoppingListItems,
   });
+  syncMealUpdateResult(result, mealId, previousListId, previousListItems, nextListItems);
   saveToStorage(get());
 }

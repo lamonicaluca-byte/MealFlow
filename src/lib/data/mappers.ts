@@ -379,3 +379,36 @@ export function mapMealFeedback(row: Row): MealFeedback {
     createdAt: row.created_at,
   };
 }
+
+export function dietaryProfileToRow(patch: Partial<DietaryProfile>): Row {
+  const row: Row = {};
+  if (patch.preferredDishes !== undefined) row.preferred_dishes = patch.preferredDishes;
+  if (patch.dislikedTextures !== undefined) row.disliked_textures = patch.dislikedTextures;
+  if (patch.familyNotes !== undefined) row.family_notes = patch.familyNotes;
+  if (patch.opennessToNewDishes !== undefined) row.openness_to_new_dishes = patch.opennessToNewDishes;
+  return row;
+}
+
+export function notificationPreferencesToRow(patch: Partial<NotificationPreferences>): Row {
+  const row: Row = {};
+  if (patch.menuPronto !== undefined) row.menu_pronto = patch.menuPronto;
+  if (patch.promemoriaApprovazione !== undefined) row.promemoria_approvazione = patch.promemoriaApprovazione;
+  if (patch.menuApprovato !== undefined) row.menu_approvato = patch.menuApprovato;
+  if (patch.spesaAggiornata !== undefined) row.spesa_aggiornata = patch.spesaAggiornata;
+  if (patch.noteAggiunte !== undefined) row.note_aggiunte = patch.noteAggiunte;
+  if (patch.canale !== undefined) row.canale = patch.canale;
+  return row;
+}
+
+export function invitationToRow(invitation: Invitation): Row {
+  return {
+    household_id: invitation.householdId,
+    email: invitation.email,
+    role: invitation.role,
+    operational_role: invitation.operationalRole,
+    invited_by: invitation.invitedBy,
+    token: invitation.token,
+    status: invitation.status,
+    expires_at: invitation.expiresAt,
+  };
+}
