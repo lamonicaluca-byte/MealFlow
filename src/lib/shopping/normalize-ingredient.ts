@@ -6,6 +6,7 @@
  * automaticamente), per non produrre "conversioni incerte".
  */
 const ALIAS_GROUPS: string[][] = [
+  ["banana", "banane"],
   ["zucchina", "zucchine"],
   ["carota", "carote"],
   ["patata", "patate"],
