@@ -132,7 +132,7 @@ export default function ShoppingListPage() {
           if (categoryItems.length === 0) return null;
           return (
             <section key={category}>
-              <h2 className="mb-1 font-display text-sm font-semibold text-foreground">{SHOPPING_CATEGORY_LABELS[category]}</h2>
+              <h2 className="mb-2 font-display text-lg font-semibold text-foreground">{SHOPPING_CATEGORY_LABELS[category]}</h2>
               <div>
                 {categoryItems.map((item) => (
                   <ShoppingItemRow key={item.id} item={item} />
