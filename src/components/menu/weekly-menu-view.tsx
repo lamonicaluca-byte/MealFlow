@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 
 import type { Meal, MealSlot } from "@/types/domain";
 import { MEAL_SLOT_LABELS, WEEKDAY_LABELS } from "@/types/domain";
 import { cn, formatDateDisplay } from "@/lib/utils";
 import { groupMealsByDay } from "@/lib/selectors/menu-selectors";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { canEditMenu } from "@/lib/auth/permissions";
 import { MealCard } from "./meal-card";
+import { AddManualLunchDialog } from "./add-manual-lunch-dialog";
 import { Button } from "@/components/ui/button";
 
 const SLOT_ORDER: MealSlot[] = ["colazione", "pranzo", "cena"];
@@ -22,7 +25,13 @@ const SLOT_ORDER: MealSlot[] = ["colazione", "pranzo", "cena"];
 // ci sono. Ogni colonna ha una larghezza minima leggibile; se lo schermo è
 // più stretto della somma delle 7, il contenitore scorre in orizzontale
 // invece di ridurre il numero di colonne.
-const DESKTOP_GRID = "grid grid-cols-[repeat(7,minmax(11rem,1fr))] gap-4";
+//
+// Colonna in più a sinistra ("Colazione"/"Pranzo"/"Cena"): etichetta il
+// pasto una sola volta per riga invece che ripeterlo in ogni card (vedi
+// meal-card.tsx, eyebrow rimossa in versione compatta) — a larghezza fissa,
+// non minmax, perché il suo contenuto è breve e non deve competere per lo
+// spazio con le colonne dei giorni.
+const DESKTOP_GRID = "grid grid-cols-[5.5rem_repeat(7,minmax(11rem,1fr))] gap-4";
 
 export function WeeklyMenuView({
   meals,
@@ -42,6 +51,8 @@ export function WeeklyMenuView({
   const currentWeekMonday = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const isCurrentWeek = weekStartDate === currentWeekMonday;
   const days = isCurrentWeek ? allDays.filter((d) => d.date >= todayISO) : allDays;
+  const { role } = useCurrentUser();
+  const canEdit = canEditMenu(role);
 
   if (allDays.length === 0) {
     return (
@@ -97,6 +108,11 @@ export function WeeklyMenuView({
           automaticamente la stessa altezza, dettata da CSS Grid. */}
       <div className="hidden overflow-x-auto lg:block">
         <div className={DESKTOP_GRID}>
+          {/* Cella d'angolo: sotto ci sono le etichette di riga ("Colazione"/"Pranzo"/"Cena"),
+              qui basta un richiamo leggero a cosa rappresenta quella colonna. */}
+          <div className="flex items-end p-3">
+            <span className="text-eyebrow text-muted-foreground">Pasto</span>
+          </div>
           {days.map(({ day, date }) => {
             const isToday = date === todayISO;
             return (
@@ -112,7 +128,14 @@ export function WeeklyMenuView({
 
         {SLOT_ORDER.map((slot) => (
           <div key={slot} className={cn(DESKTOP_GRID, "mt-3")}>
-            {days.map(({ date, meals: dayMeals }) => {
+            {/* Etichetta di riga: si allunga automaticamente (comportamento di
+                default di CSS Grid) fino all'altezza della card più alta della
+                riga, restando centrata al suo interno — non serve più ripetere
+                lo slot dentro ogni card (vedi meal-card.tsx). */}
+            <div className="flex flex-col items-center justify-center gap-0.5 rounded-md border-r-2 border-border/60 pr-2 text-center">
+              <span className="font-display text-sm font-semibold text-foreground">{MEAL_SLOT_LABELS[slot]}</span>
+            </div>
+            {days.map(({ day, date, meals: dayMeals }) => {
               const slotMeals = dayMeals.filter((m) => m.slot === slot);
               if (slotMeals.length === 0) {
                 // Nessun pasto in questo slot per questo giorno (tipicamente
@@ -122,11 +145,37 @@ export function WeeklyMenuView({
                 // self-start: non si allunga per riempire l'altezza della
                 // riga (che resta quella della card più alta, es. il pranzo
                 // del weekend) — resta compatta, non ha bisogno di più spazio.
+                //
+                // Per il pranzo, che non viene mai generato automaticamente
+                // nei giorni feriali (§5), la cella vuota è anche il punto in
+                // cui aggiungerlo: stesso dialogo del bottone "Aggiungi
+                // pranzo" in cima alla pagina, ma già a conoscenza di giorno e
+                // data, così non serve riselezionarli.
+                const placeholderClass =
+                  "flex h-fit w-full items-center justify-center self-start rounded-lg border border-dashed border-border p-3 text-center text-[11px] text-muted-foreground";
+                if (slot === "pranzo" && canEdit) {
+                  // <button>, non <div>: deve restare raggiungibile e attivabile
+                  // da tastiera come qualsiasi altro trigger di dialogo.
+                  return (
+                    <AddManualLunchDialog
+                      key={`${date}-${slot}`}
+                      day={day}
+                      date={date}
+                      trigger={
+                        <button
+                          type="button"
+                          className={cn(placeholderClass, "cursor-pointer transition-colors hover:border-crimson/50 hover:text-crimson")}
+                        >
+                          <span className="flex items-center gap-1">
+                            <Plus className="h-3 w-3" /> Aggiungi pranzo
+                          </span>
+                        </button>
+                      }
+                    />
+                  );
+                }
                 return (
-                  <div
-                    key={`${date}-${slot}`}
-                    className="flex h-fit items-center justify-center self-start rounded-lg border border-dashed border-border p-3 text-center text-[11px] text-muted-foreground"
-                  >
+                  <div key={`${date}-${slot}`} className={placeholderClass}>
                     {MEAL_SLOT_LABELS[slot]}: nessuno
                   </div>
                 );

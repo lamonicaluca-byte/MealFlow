@@ -24,21 +24,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 /**
  * Permette di aggiungere manualmente un pranzo nei giorni feriali (§5): non
  * viene mai generato automaticamente, ma resta sempre possibile aggiungerlo.
+ *
+ * Due modalità: (a) bottone unico con selettore giorno (`weekdayMeals`, uso
+ * storico, in cima alla pagina Menu); (b) giorno/data già noti e un trigger
+ * personalizzato (`day`+`date`+`trigger`, usata dal riquadro tratteggiato
+ * "Pranzo: nessuno" nella griglia settimanale) — qui non serve alcun
+ * selettore, la cella sa già a quale giorno appartiene.
  */
-export function AddManualLunchDialog({ weekdayMeals }: { weekdayMeals: Meal[] }) {
+export function AddManualLunchDialog({
+  weekdayMeals,
+  day: fixedDay,
+  date: fixedDate,
+  trigger,
+}: {
+  weekdayMeals?: Meal[];
+  day?: Weekday;
+  date?: string;
+  trigger?: React.ReactNode;
+}) {
   const [open, setOpen] = React.useState(false);
-  const [day, setDay] = React.useState<Weekday>("lunedi");
+  const [day, setDay] = React.useState<Weekday>(fixedDay ?? "lunedi");
   const [dishName, setDishName] = React.useState("");
   const addManualMeal = useAppStore((s) => s.addManualMeal);
   const { user } = useCurrentUser();
 
-  const weekdayOptions = weekdayMeals.filter((m) => m.day !== "sabato" && m.day !== "domenica");
+  const weekdayOptions = (weekdayMeals ?? []).filter((m) => m.day !== "sabato" && m.day !== "domenica");
   const uniqueDays = Array.from(new Map(weekdayOptions.map((m) => [m.day, m])).values());
 
   const onSubmit = () => {
-    const reference = uniqueDays.find((m) => m.day === day);
-    if (!reference || !dishName.trim() || !user) return;
-    addManualMeal(day, reference.date, "pranzo", dishName.trim(), user.id);
+    if (!dishName.trim() || !user) return;
+    const targetDay = fixedDay ?? day;
+    const targetDate = fixedDate ?? uniqueDays.find((m) => m.day === day)?.date;
+    if (!targetDate) return;
+    addManualMeal(targetDay, targetDate, "pranzo", dishName.trim(), user.id);
     setDishName("");
     setOpen(false);
   };
@@ -46,33 +64,37 @@ export function AddManualLunchDialog({ weekdayMeals }: { weekdayMeals: Meal[] })
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="mr-1.5 h-3.5 w-3.5" /> Aggiungi pranzo
-        </Button>
+        {trigger ?? (
+          <Button variant="outline" size="sm">
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Aggiungi pranzo
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Aggiungi un pranzo</DialogTitle>
+          <DialogTitle>Aggiungi un pranzo{fixedDay ? ` — ${WEEKDAY_LABELS[fixedDay]}` : ""}</DialogTitle>
           <DialogDescription>
             Nei giorni feriali il pranzo non viene generato automaticamente: puoi aggiungerlo quando serve.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Giorno</Label>
-            <Select value={day} onValueChange={(v) => setDay(v as Weekday)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {uniqueDays.map((m) => (
-                  <SelectItem key={m.day} value={m.day}>
-                    {WEEKDAY_LABELS[m.day]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!fixedDay && (
+            <div className="space-y-1.5">
+              <Label>Giorno</Label>
+              <Select value={day} onValueChange={(v) => setDay(v as Weekday)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueDays.map((m) => (
+                    <SelectItem key={m.day} value={m.day}>
+                      {WEEKDAY_LABELS[m.day]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="dishName">Cosa si mangia</Label>
             <Input id="dishName" value={dishName} onChange={(e) => setDishName(e.target.value)} placeholder="Es. Pasta al pomodoro" />

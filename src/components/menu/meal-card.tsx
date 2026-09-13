@@ -78,8 +78,10 @@ export function MealCard({ meal, compact = false }: { meal: Meal; compact?: bool
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          {/* In versione compatta il giorno è già nell'intestazione della colonna: qui basta lo slot. */}
-          <p className="text-eyebrow">{compact ? MEAL_SLOT_LABELS[meal.slot] : `${WEEKDAY_LABELS[meal.day]} · ${MEAL_SLOT_LABELS[meal.slot]}`}</p>
+          {/* In versione compatta giorno e slot sono già dati dalla posizione nella
+              griglia (colonna = giorno, riga con etichetta a sinistra = pasto):
+              qui l'eyebrow sarebbe una terza ripetizione della stessa informazione. */}
+          {!compact && <p className="text-eyebrow">{`${WEEKDAY_LABELS[meal.day]} · ${MEAL_SLOT_LABELS[meal.slot]}`}</p>}
           {/* L'emoji è un elemento fratello, non dentro l'h3: se stesse
               dentro il blocco troncato (line-clamp), in una colonna stretta
               "ruba" da sola un'intera riga delle 2 disponibili, lasciando
