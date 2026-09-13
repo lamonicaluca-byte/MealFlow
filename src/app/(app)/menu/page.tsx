@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { format, addWeeks, startOfWeek } from "date-fns";
 
 import { useAppStore } from "@/store/app-store";
 import { formatDateDisplay } from "@/lib/utils";
@@ -14,7 +15,17 @@ export default function MenuPage() {
   const weeklyMenus = useAppStore((s) => s.weeklyMenus);
   const meals = useAppStore((s) => s.meals);
 
-  const sorted = [...weeklyMenus].sort((a, b) => a.weekStartDate.localeCompare(b.weekStartDate));
+  // Solo la settimana corrente e quella successiva (a partire da quando
+  // esiste, di solito dal giovedì grazie al cron di generazione anticipata):
+  // lo storico di quelle passate vive già in "Storico menu", non qui. Prima
+  // venivano mostrate (e selezionate di default!) tutte le settimane
+  // caricate, comprese fino a 8 passate: il tab iniziale finiva quasi
+  // sempre sulla più vecchia, non su quella corrente.
+  const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const nextWeekStart = format(addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1), "yyyy-MM-dd");
+  const sorted = weeklyMenus
+    .filter((m) => m.weekStartDate === currentWeekStart || m.weekStartDate === nextWeekStart)
+    .sort((a, b) => a.weekStartDate.localeCompare(b.weekStartDate));
   const [tab, setTab] = React.useState<string>(sorted[0]?.id ?? "");
 
   React.useEffect(() => {
