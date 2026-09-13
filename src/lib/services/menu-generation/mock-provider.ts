@@ -86,10 +86,17 @@ function getEligibleRecipes(
     const forbidden = context.dietaryProfiles.flatMap((p) => p.restrictions.map((r) => r.ingredient.toLowerCase()));
     if (recipe.ingredients.some((ing) => forbidden.some((f) => ing.name.toLowerCase().includes(f)))) return false;
 
+    // "excludeNames" evita un piatto ripetuto due volte nella STESSA
+    // settimana (validateGeneratedWeek fa fallire l'intera generazione se
+    // succede): non va bypassato nemmeno in fallback, a differenza delle
+    // preferenze pure sotto. Chi vuole davvero permettere un duplicato come
+    // ultimissima risorsa (dataset esaurito) lo fa già passando un Set
+    // vuoto qui, non affidandosi a questo early return.
+    if (opts.excludeNames.has(recipe.name.toLowerCase())) return false;
+
     if (opts.relaxSoftConstraints) return true;
 
     // Vincoli soft: evitabili in fallback se il pool si esaurisce.
-    if (opts.excludeNames.has(recipe.name.toLowerCase())) return false;
     if (isDisliked(recipe, context)) return false;
     // Già proposto nelle 1-2 settimane precedenti: evita che la stessa
     // ricetta torni identica da una settimana alla successiva (non solo
@@ -171,43 +178,66 @@ function dateForDay(weekStartDate: string, day: Weekday): string {
   return start.toISOString().slice(0, 10);
 }
 
-const MIN_FISH_DINNERS_PER_WEEK = 1;
-
-function isFishRecipe(recipe: Pick<Recipe, "mediterraneanTags">): boolean {
-  return recipe.mediterraneanTags.includes("pesce");
-}
+/**
+ * Frequenze minime settimanali derivate dalla piramide alimentare
+ * mediterranea aggiornata dalla Società Italiana di Nutrizione Umana (SINU,
+ * 2025): pesce 2-3 volte/settimana, legumi almeno 3 volte/settimana. Lo
+ * stesso testo, in forma discorsiva, va anche nel prompt del provider AI
+ * reale (vedi prompts.ts, "Equilibrio nutrizionale della settimana") — qui è
+ * la controparte meccanica per il provider mock, che non ragiona su un
+ * prompt ma pesca da una libreria fissa di ricette già taggate.
+ */
+const NUTRITION_QUOTAS: { tag: string; minCount: number; slot?: MealSlot }[] = [
+  { tag: "pesce", minCount: 2, slot: "cena" },
+  { tag: "legumi", minCount: 3 },
+];
 
 /**
- * Garantisce almeno {@link MIN_FISH_DINNERS_PER_WEEK} cene a base di pesce
- * nella settimana, sostituendo (quando possibile) alcune cene non di pesce
- * già assegnate. Muta l'array `meals` in place. Non forza mai la sostituzione
- * se nessuna ricetta di pesce risulta idonea (es. allergia al pesce in
- * famiglia): la sicurezza alimentare resta sempre prioritaria su questa
- * preferenza nutrizionale.
+ * Garantisce, per ciascuna quota di {@link NUTRITION_QUOTAS}, almeno
+ * `minCount` pasti con quel tag nella settimana, sostituendo (quando
+ * possibile) pasti che non contribuiscono a NESSUNA quota tracciata. Non
+ * "ruba" mai un pasto che già soddisfa un'altra quota (es. non toglie una
+ * cena di pesce già conteggiata per fare posto ai legumi): le quote si
+ * sommano, non si scambiano tra loro. Muta l'array `meals` in place. Non
+ * forza mai la sostituzione se nessuna ricetta idonea è disponibile (es.
+ * allergia in famiglia): la sicurezza alimentare resta sempre prioritaria su
+ * questo equilibrio nutrizionale, che è solo un vincolo soft.
  */
-function ensureMinimumFishDinners(meals: GeneratedMeal[], context: HouseholdContext, rng: () => number): void {
-  const dinnerIndices = meals.map((_, i) => i).filter((i) => meals[i]!.slot === "cena");
-  let missing =
-    MIN_FISH_DINNERS_PER_WEEK - dinnerIndices.filter((i) => isFishRecipe(meals[i]!.recipe)).length;
-  if (missing <= 0) return;
+function ensureNutritionQuotas(meals: GeneratedMeal[], context: HouseholdContext, rng: () => number): void {
+  const trackedTags = new Set(NUTRITION_QUOTAS.map((q) => q.tag));
+  const hasTag = (m: GeneratedMeal, tag: string) => m.recipe.mediterraneanTags.includes(tag);
 
-  const fishPool = MAIN_RECIPES.filter(isFishRecipe);
+  for (const quota of NUTRITION_QUOTAS) {
+    const candidateIndices = meals
+      .map((_, i) => i)
+      .filter((i) => meals[i]!.slot !== "colazione" && (!quota.slot || meals[i]!.slot === quota.slot));
+    let missing = quota.minCount - candidateIndices.filter((i) => hasTag(meals[i]!, quota.tag)).length;
+    if (missing <= 0) continue;
 
-  for (const idx of dinnerIndices) {
-    if (missing <= 0) break;
-    const target = meals[idx]!;
-    if (isFishRecipe(target.recipe)) continue;
+    const pool = MAIN_RECIPES.filter((r) => r.mediterraneanTags.includes(quota.tag));
 
-    const usedNames = new Set(meals.map((m) => m.recipe.name.toLowerCase()));
-    let candidates = getEligibleRecipes(fishPool, context, { day: target.day, excludeNames: usedNames, relaxSoftConstraints: false });
-    if (candidates.length === 0) {
-      candidates = getEligibleRecipes(fishPool, context, { day: target.day, excludeNames: new Set(), relaxSoftConstraints: true });
+    for (const idx of candidateIndices) {
+      if (missing <= 0) break;
+      const target = meals[idx]!;
+      if (hasTag(target, quota.tag)) continue;
+      const satisfiesOtherQuota = [...trackedTags].some((t) => t !== quota.tag && hasTag(target, t));
+      if (satisfiesOtherQuota) continue;
+
+      // NB: excludeNames resta sempre `usedNames` (mai svuotato) in entrambi i
+      // tentativi: un duplicato nella stessa settimana farebbe fallire
+      // l'intera generazione in validateGeneratedWeek, un esito ben peggiore
+      // del semplice non raggiungere questa quota per un pasto.
+      const usedNames = new Set(meals.map((m) => m.recipe.name.toLowerCase()));
+      let candidates = getEligibleRecipes(pool, context, { day: target.day, excludeNames: usedNames, relaxSoftConstraints: false });
+      if (candidates.length === 0) {
+        candidates = getEligibleRecipes(pool, context, { day: target.day, excludeNames: usedNames, relaxSoftConstraints: true });
+      }
+      if (candidates.length === 0) continue; // nessuna ricetta idonea senza duplicati per la famiglia: non si forza il vincolo.
+
+      const chosen = pickDeterministic(candidates, rng);
+      meals[idx] = buildGeneratedMeal(chosen, target.day, target.date, target.slot, context);
+      missing -= 1;
     }
-    if (candidates.length === 0) continue; // nessuna ricetta di pesce sicura per la famiglia: non si forza il vincolo.
-
-    const chosen = pickDeterministic(candidates, rng);
-    meals[idx] = buildGeneratedMeal(chosen, target.day, target.date, "cena", context);
-    missing -= 1;
   }
 }
 
@@ -236,7 +266,7 @@ export class MockMenuProvider implements MenuGenerationService {
         }
       }
 
-      ensureMinimumFishDinners(meals, context, rng);
+      ensureNutritionQuotas(meals, context, rng);
 
       const week: GeneratedWeek = { weekStartDate, meals };
       const validation = validateGeneratedWeek(week, context.dietaryProfiles, memberNameMap(context));

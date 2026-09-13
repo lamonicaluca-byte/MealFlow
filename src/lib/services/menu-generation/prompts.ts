@@ -103,8 +103,22 @@ export function buildHouseholdRulesText(context: HouseholdContext): string {
     lines.push(`- Nei giorni in cui cucina Chalika (${days}), preferisci ricette semplici con pochi passaggi.`);
   }
 
+  lines.push(
+    "",
+    "## Equilibrio nutrizionale della settimana (piramide alimentare mediterranea, SINU 2025)",
+    "Il menu di ciascuna settimana deve rispettare, nel complesso, queste frequenze e questi principi (regole soft: derogabili solo se in conflitto con le regole di sicurezza sopra, mai per comodità):",
+    "- Pesce: 2-3 pasti a settimana, prediligendo pesce azzurro o locale (es. sgombro, alici, sardine) al posto di tonno o pesce spada, a meno che non sia impossibile per un'allergia al pesce in famiglia.",
+    "- Legumi: almeno 3 pasti a settimana, da soli o abbinati a cereali/verdure.",
+    "- Carne bianca (pollo, tacchino) e uova: consumo settimanale (poche volte a settimana ciascuno), non tutti i giorni.",
+    "- Formaggio: consumo settimanale, non quotidiano; quando presente in un piatto, preferire formaggi freschi (ricotta, mozzarella, feta) a quelli stagionati e molto salati.",
+    "- Carne rossa: al massimo 1 pasto a settimana, di consumo occasionale. Niente salumi o carne processata come piatto principale.",
+    "- Patate: al massimo 1-2 pasti a settimana, e mai nello stesso pasto insieme a un altro cereale (pasta, riso o pane): in quel pasto le patate sostituiscono il cereale, non lo affiancano.",
+    "- In ogni pranzo e cena includere verdura, condendo preferibilmente con olio extravergine di oliva; per i cereali (pasta, riso, pane), preferire le versioni integrali quando ha senso per la ricetta.",
+    "- Dolci con zuccheri aggiunti solo per occasioni speciali, mai come piatto principale o contorno abituale del pasto.",
+    "- Moderazione nel sale: preferire spezie ed erbe aromatiche per insaporire.",
+  );
+
   lines.push("", "## Regole fisse dell'app (sempre valide)");
-  lines.push("- Almeno 1 cena a base di pesce nella settimana, a meno che non sia impossibile per un'allergia al pesce in famiglia.");
   lines.push("- Struttura della settimana: lunedì-venerdì colazione e cena; sabato e domenica anche il pranzo.");
   lines.push(
     "- Varia le ricette all'interno della stessa settimana: non ripetere lo stesso piatto principale due volte.",
