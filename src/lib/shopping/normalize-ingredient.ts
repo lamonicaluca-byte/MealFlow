@@ -33,7 +33,42 @@ for (const group of ALIAS_GROUPS) {
   }
 }
 
+/**
+ * Descrittori che si attaccano al nome ("uova FRESCHE", "pomodori MATURI")
+ * senza cambiare il prodotto agli occhi della lista della spesa: si
+ * rimuovono prima del confronto, così "uova" e "uova fresche" finiscono
+ * nella stessa riga. Elenco curato e volutamente prudente — solo parole che
+ * non cambiano MAI cosa comprare — non ogni aggettivo possibile: "secco"
+ * o "surgelato", per esempio, restano fuori apposta, perché "fagioli
+ * secchi" e "verdure surgelate" sono spesso davvero un prodotto diverso
+ * (altro reparto, altra confezione) da "fagioli" o "verdure".
+ */
+const IGNORABLE_QUALIFIERS = new Set([
+  "fresco",
+  "fresca",
+  "freschi",
+  "fresche",
+  "maturo",
+  "matura",
+  "maturi",
+  "mature",
+  "biologico",
+  "biologica",
+  "biologici",
+  "biologiche",
+  "bio",
+  "extravergine",
+]);
+
+function stripIgnorableQualifiers(name: string): string {
+  const words = name.split(" ").filter((w) => !IGNORABLE_QUALIFIERS.has(w));
+  // Se il nome fosse fatto solo di descrittori (improbabile, ma per non
+  // finire con una riga senza nome) si tiene l'originale.
+  return words.length > 0 ? words.join(" ") : name;
+}
+
 export function normalizeIngredientName(rawName: string): string {
   const cleaned = rawName.toLowerCase().trim().replace(/\s+/g, " ");
-  return ALIAS_MAP.get(cleaned) ?? cleaned;
+  const withoutQualifiers = stripIgnorableQualifiers(cleaned);
+  return ALIAS_MAP.get(withoutQualifiers) ?? withoutQualifiers;
 }
