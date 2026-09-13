@@ -10,7 +10,7 @@
  *   visitata (o la pagina offline) quando non lo è.
  * - Bump di CACHE_VERSION a ogni release per invalidare la cache precedente.
  */
-const CACHE_VERSION = "mealflow-v1";
+const CACHE_VERSION = "mealflow-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
