@@ -34,7 +34,7 @@ export async function ensureWeeklyMenu(
     return { ok: true, menuId: existing.id, created: false };
   }
 
-  const [{ data: householdRow }, { data: memberRows }, { data: profileRows }, { data: preferencesRow }, { data: feedbackRows }] =
+  const [{ data: householdRow }, { data: memberRows }, { data: profileRows }, { data: preferencesRow }, { data: feedbackRows }, recentRecipeNames] =
     await Promise.all([
       service.from("households").select("*").eq("id", householdId).single(),
       service.from("household_members").select("*").eq("household_id", householdId).is("deleted_at", null),
@@ -51,6 +51,11 @@ export async function ensureWeeklyMenu(
         .eq("household_id", householdId)
         .order("created_at", { ascending: false })
         .limit(100),
+      // Ricette già proposte nelle 2 settimane precedenti: senza questo, il
+      // generatore evita ripetizioni solo DENTRO la stessa settimana, non da
+      // una settimana alla successiva (es. "pasta e fagioli" tornava
+      // identica lunedì dopo lunedì).
+      fetchRecentRecipeNames(service, householdId, weekStartDate),
     ]);
 
   if (!householdRow || !memberRows) {
@@ -75,6 +80,7 @@ export async function ensureWeeklyMenu(
           updatedAt: new Date().toISOString(),
         },
     recentFeedback: mapFeedbackRows(feedbackRows ?? []),
+    recentRecipeNames,
   };
 
   const menuService = await getMenuGenerationService();
@@ -140,6 +146,33 @@ export async function ensureWeeklyMenu(
   }
 
   return { ok: true, menuId: menuRow.id, created: true };
+}
+
+/**
+ * Nomi delle ricette proposte nelle 2 settimane immediatamente precedenti a
+ * `beforeWeekStartDate`, per far sì che la generazione (mock o AI reale)
+ * non ripeta uno stesso piatto da una settimana alla successiva. Guarda solo
+ * la versione CORRENTE di ciascun menu (non lo storico delle revisioni): è
+ * quello che la famiglia ha davvero visto/mangiato.
+ */
+async function fetchRecentRecipeNames(
+  service: SupabaseClient,
+  householdId: string,
+  beforeWeekStartDate: string,
+): Promise<string[]> {
+  const { data: recentMenus } = await service
+    .from("weekly_menus")
+    .select("current_version_id")
+    .eq("household_id", householdId)
+    .lt("week_start_date", beforeWeekStartDate)
+    .order("week_start_date", { ascending: false })
+    .limit(2);
+  const versionIds = (recentMenus ?? []).map((m) => m.current_version_id).filter(Boolean);
+  if (versionIds.length === 0) return [];
+
+  const { data: recentMeals } = await service.from("meals").select("recipe_snapshot").in("menu_version_id", versionIds);
+  const names = (recentMeals ?? []).map((m) => m.recipe_snapshot?.name).filter((name): name is string => Boolean(name));
+  return Array.from(new Set(names));
 }
 
 /**

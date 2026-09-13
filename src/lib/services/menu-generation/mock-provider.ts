@@ -91,6 +91,10 @@ function getEligibleRecipes(
     // Vincoli soft: evitabili in fallback se il pool si esaurisce.
     if (opts.excludeNames.has(recipe.name.toLowerCase())) return false;
     if (isDisliked(recipe, context)) return false;
+    // Già proposto nelle 1-2 settimane precedenti: evita che la stessa
+    // ricetta torni identica da una settimana alla successiva (non solo
+    // dentro la stessa settimana, già coperto da excludeNames).
+    if (context.recentRecipeNames?.some((n) => n.toLowerCase() === recipe.name.toLowerCase())) return false;
     if (recipe.prepMinutes + recipe.cookMinutes > maxPrep) return false;
     return true;
   });

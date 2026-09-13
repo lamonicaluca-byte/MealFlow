@@ -133,7 +133,21 @@ function buildContext(state: AppState): HouseholdContext {
     dietaryProfiles: state.dietaryProfiles,
     preferences: state.preferences!,
     recentFeedback: buildRecentFeedback(state),
+    recentRecipeNames: buildRecentRecipeNames(state),
   };
+}
+
+/** Ricette delle 2 settimane più recenti già caricate, per evitare che una rigenerazione/alternativa riproponga un piatto appena visto (stessa logica server-side in generate-and-save-week.ts). */
+function buildRecentRecipeNames(state: AppState): string[] {
+  const recentVersionIds = [...state.weeklyMenus]
+    .sort((a, b) => b.weekStartDate.localeCompare(a.weekStartDate))
+    .slice(0, 2)
+    .map((m) => m.currentVersionId);
+  const names = state.meals
+    .filter((m) => recentVersionIds.includes(m.menuVersionId))
+    .map((m) => m.recipeSnapshot?.name)
+    .filter((n): n is string => Boolean(n));
+  return Array.from(new Set(names));
 }
 
 /**

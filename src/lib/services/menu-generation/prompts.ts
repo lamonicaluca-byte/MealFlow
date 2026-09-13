@@ -85,6 +85,14 @@ export function buildHouseholdRulesText(context: HouseholdContext): string {
     }
   }
 
+  if (context.recentRecipeNames?.length) {
+    lines.push(
+      "",
+      "## Piatti già proposti nelle 1-2 settimane precedenti (varia, non ripeterli identici)",
+      `${context.recentRecipeNames.join(", ")}.`,
+    );
+  }
+
   lines.push("", "## Impostazioni della famiglia");
   lines.push(`- Tempo massimo di preparazione nei giorni feriali: ${household.settings.maxPrepMinutesWeekday} minuti.`);
   lines.push(`- Tempo massimo di preparazione nel weekend: ${household.settings.maxPrepMinutesWeekend} minuti.`);
@@ -98,7 +106,10 @@ export function buildHouseholdRulesText(context: HouseholdContext): string {
   lines.push("", "## Regole fisse dell'app (sempre valide)");
   lines.push("- Almeno 1 cena a base di pesce nella settimana, a meno che non sia impossibile per un'allergia al pesce in famiglia.");
   lines.push("- Struttura della settimana: lunedì-venerdì colazione e cena; sabato e domenica anche il pranzo.");
-  lines.push("- Varia le ricette all'interno della stessa settimana: non ripetere lo stesso piatto principale due volte.");
+  lines.push(
+    "- Varia le ricette all'interno della stessa settimana: non ripetere lo stesso piatto principale due volte.",
+    "- Varia anche rispetto alle settimane precedenti: evita di riproporre uno stesso piatto identico da una settimana alla successiva (vedi elenco sopra, se presente).",
+  );
 
   return lines.join("\n");
 }
