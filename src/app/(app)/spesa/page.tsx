@@ -1,15 +1,18 @@
 "use client";
 
 import * as React from "react";
+import { format, addWeeks, startOfWeek } from "date-fns";
 import { Search, Undo2 } from "lucide-react";
 
 import { useAppStore } from "@/store/app-store";
+import { formatDateDisplay } from "@/lib/utils";
 import { SHOPPING_CATEGORY_LABELS, type ShoppingCategory, type ShoppingItemStatus } from "@/types/domain";
 import { SHOPPING_ITEM_STATUS_LABELS } from "@/types/domain";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShoppingItemRow } from "@/components/shopping/shopping-item-row";
 import { AddShoppingItemDialog } from "@/components/shopping/add-shopping-item-dialog";
 
@@ -35,7 +38,25 @@ export default function ShoppingListPage() {
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<ShoppingItemStatus | "tutti">("tutti");
 
-  const list = [...shoppingLists].sort((a, b) => b.weekStartDate.localeCompare(a.weekStartDate))[0];
+  // Solo la lista della settimana corrente e quella successiva (stessa
+  // logica della pagina Menu): prima si prendeva sempre la lista con la
+  // data più recente, che appena la settimana prossima veniva approvata
+  // diventava quella futura — nascondendo la spesa della settimana in
+  // corso, quella ancora da fare oggi.
+  const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const nextWeekStart = format(addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1), "yyyy-MM-dd");
+  const relevantLists = [...shoppingLists]
+    .filter((l) => l.weekStartDate === currentWeekStart || l.weekStartDate === nextWeekStart)
+    .sort((a, b) => a.weekStartDate.localeCompare(b.weekStartDate));
+
+  const [tab, setTab] = React.useState<string>(relevantLists[0]?.id ?? "");
+
+  React.useEffect(() => {
+    if (!tab && relevantLists[0]) setTab(relevantLists[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relevantLists.length]);
+
+  const list = relevantLists.find((l) => l.id === tab) ?? relevantLists[0];
   const listItems = items.filter((i) => i.shoppingListId === list?.id);
 
   const filtered = listItems.filter((i) => {
@@ -71,6 +92,18 @@ export default function ShoppingListPage() {
         </div>
       </div>
 
+      {relevantLists.length > 1 && (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList>
+            {relevantLists.map((l) => (
+              <TabsTrigger key={l.id} value={l.id}>
+                Settimana del {formatDateDisplay(l.weekStartDate)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
+
       <Progress value={listItems.length > 0 ? (boughtCount / listItems.length) * 100 : 0} />
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -99,7 +132,7 @@ export default function ShoppingListPage() {
           if (categoryItems.length === 0) return null;
           return (
             <section key={category}>
-              <h2 className="mb-1 text-sm font-semibold text-foreground">{SHOPPING_CATEGORY_LABELS[category]}</h2>
+              <h2 className="mb-1 font-display text-sm font-semibold text-foreground">{SHOPPING_CATEGORY_LABELS[category]}</h2>
               <div>
                 {categoryItems.map((item) => (
                   <ShoppingItemRow key={item.id} item={item} />
